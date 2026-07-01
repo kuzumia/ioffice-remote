@@ -1,1 +1,489 @@
-<h1>Test</h1>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>iOffice Remote</title>
+    <meta name="theme-color" content="#1e293b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png">
+    
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #3b82f6;
+            --danger: #ef4444;
+            --success: #22c55e;
+            --warning: #f59e0b;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        header {
+            background-color: var(--surface);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-top: env(safe-area-inset-top, 20px);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            background: linear-gradient(90deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .container {
+            padding: 20px;
+            flex: 1;
+        }
+
+        .card {
+            background-color: var(--surface);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        input[type="password"], input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 16px;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        button:active {
+            opacity: 0.8;
+        }
+        
+        button:disabled {
+            background-color: #475569;
+            color: #94a3b8;
+        }
+
+        /* Segmented Control */
+        .segmented-control {
+            display: flex;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 4px;
+            margin-top: 8px;
+        }
+
+        .segmented-control label {
+            flex: 1;
+            text-align: center;
+            margin: 0;
+            padding: 10px 0;
+            cursor: pointer;
+            border-radius: 6px;
+            color: var(--text-muted);
+            font-weight: 500;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .segmented-control input {
+            display: none;
+        }
+
+        .segmented-control input:checked + label {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* Specific colors for PowerMode */
+        #pm-auto:checked + label { background: var(--primary); }
+        #pm-on:checked + label { background: var(--success); }
+        #pm-off:checked + label { background: var(--danger); }
+
+        .status {
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-top: 20px;
+            padding-bottom: env(safe-area-inset-bottom, 20px);
+        }
+
+        .loader {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        #setup-screen { display: none; }
+        #remote-screen { display: none; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>iOffice Remote</h1>
+    </header>
+
+    <div class="container">
+        
+        <!-- Màn hình cài đặt PAT -->
+        <div id="setup-screen" class="card">
+            <h2 style="margin-top:0; font-size: 1.2rem;">Thiết lập kết nối</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5;">Vui lòng nhập mã GitHub PAT của bạn để kết nối với màn hình.</p>
+            <div class="form-group">
+                <label>GitHub Personal Access Token</label>
+                <input type="password" id="patInput" placeholder="ghp_xxxxxxxxxxxxxxxxx">
+            </div>
+            <button onclick="savePat()">Kết nối</button>
+        </div>
+
+        <!-- Màn hình Điều khiển -->
+        <div id="remote-screen">
+            
+            <div class="card">
+                <h3 style="margin-top:0; color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Chế độ Hiển thị</h3>
+                <div class="segmented-control">
+                    <input type="radio" name="presMode" id="pres-schedule" value="Schedule" onchange="syncToCloud()">
+                    <label for="pres-schedule">Lịch công tác</label>
+                    
+                    <input type="radio" name="presMode" id="pres-maket" value="Maket" onchange="syncToCloud()">
+                    <label for="pres-maket">Ma-két</label>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-top:0; color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Điều khiển Màn hình</h3>
+                <div class="segmented-control">
+                    <input type="radio" name="powerMode" id="pm-auto" value="Auto" onchange="syncToCloud()">
+                    <label for="pm-auto">Tự động</label>
+                    
+                    <input type="radio" name="powerMode" id="pm-on" value="On" onchange="syncToCloud()">
+                    <label for="pm-on">Luôn Bật</label>
+
+                    <input type="radio" name="powerMode" id="pm-off" value="Off" onchange="syncToCloud()">
+                    <label for="pm-off">Tắt Màn</label>
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 15px; margin-bottom: 0;">
+                    * <b>Tự động:</b> Màn hình sẽ tắt sau 1 phút nếu không có lịch trình chiếu.<br>
+                    * Lệnh sẽ được màn hình phản hồi trong vòng tối đa 60 giây.
+                </p>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-top:0; color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Danh sách Thiết bị</h3>
+                <div id="device-list" style="margin-top: 15px;">
+                    <div style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">Đang tải danh sách...</div>
+                </div>
+            </div>
+
+            <button id="refreshBtn" onclick="fetchFromCloud()" style="background: rgba(255,255,255,0.1); color: var(--text);">
+                <span class="loader" id="syncLoader"></span> Làm mới trạng thái
+            </button>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="#" onclick="logout()" style="color: var(--danger); font-size: 0.9rem; text-decoration: none;">Đăng xuất khỏi thiết bị này</a>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="status" id="statusText"></div>
+
+    <script>
+        const REPO_NAME = "iOffice-Presenter-DAStorage";
+        let PAT = localStorage.getItem('iOfficePat') || "";
+        let OWNER = localStorage.getItem('iOfficeOwner') || "phamlbnb";
+        let currentSha = "";
+
+        // UI Routing
+        if (PAT) {
+            document.getElementById('remote-screen').style.display = 'block';
+            if (!OWNER) {
+                // Determine owner from PAT
+                determineOwnerAndFetch();
+            } else {
+                fetchFromCloud();
+            }
+        } else {
+            document.getElementById('setup-screen').style.display = 'block';
+        }
+
+        function setStatus(msg, isError = false) {
+            const st = document.getElementById('statusText');
+            st.innerText = msg;
+            st.style.color = isError ? "var(--danger)" : "var(--text-muted)";
+        }
+
+        function savePat() {
+            const input = document.getElementById('patInput').value.trim();
+            if (!input) return;
+            PAT = input;
+            localStorage.setItem('iOfficePat', PAT);
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('remote-screen').style.display = 'block';
+            determineOwnerAndFetch();
+        }
+
+        function logout() {
+            localStorage.removeItem('iOfficePat');
+            localStorage.removeItem('iOfficeOwner');
+            location.reload();
+        }
+
+        async function determineOwnerAndFetch() {
+            setStatus("Đang xác thực...");
+            try {
+                const res = await fetch("https://api.github.com/user", {
+                    headers: { 
+                        "Authorization": `Bearer ${PAT}`,
+                        "X-GitHub-Api-Version": "2022-11-28"
+                    }
+                });
+                if (!res.ok) throw new Error("PAT không hợp lệ");
+                const data = await res.json();
+                OWNER = data.login;
+                localStorage.setItem('iOfficeOwner', OWNER);
+                fetchFromCloud();
+            } catch (err) {
+                setStatus(err.message, true);
+                logout();
+            }
+        }
+
+        async function fetchFromCloud() {
+            if (!PAT || !OWNER) return;
+            document.getElementById('syncLoader').style.display = 'inline-block';
+            setStatus("Đang tải dữ liệu...");
+            document.getElementById('refreshBtn').disabled = true;
+
+            try {
+                const url = `https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/global_settings.json`;
+                const res = await fetch(url, {
+                    headers: { 
+                        "Authorization": `Bearer ${PAT}`,
+                        "X-GitHub-Api-Version": "2022-11-28"
+                    }
+                });
+
+                if (res.status === 404) {
+                    setStatus("Chưa có cấu hình (Màn hình chưa online lần nào).");
+                    document.getElementById('refreshBtn').disabled = false;
+                    document.getElementById('syncLoader').style.display = 'none';
+                    return;
+                }
+
+                if (!res.ok) throw new Error("Lỗi tải cấu hình.");
+
+                const data = await res.json();
+                currentSha = data.sha;
+                const content = decodeURIComponent(escape(atob(data.content)));
+                const settings = JSON.parse(content);
+
+                // Update UI
+                if (settings.PowerMode) {
+                    document.querySelector(`input[name="powerMode"][value="${settings.PowerMode}"]`).checked = true;
+                }
+                if (settings.PresentationMode) {
+                    document.querySelector(`input[name="presMode"][value="${settings.PresentationMode}"]`).checked = true;
+                }
+
+                setStatus(`Đã đồng bộ: ${new Date().toLocaleTimeString()}`);
+                
+                await fetchDeviceStatus();
+            } catch (err) {
+                setStatus("Lỗi mạng: " + err.message, true);
+            } finally {
+                document.getElementById('syncLoader').style.display = 'none';
+                document.getElementById('refreshBtn').disabled = false;
+            }
+        }
+
+        function escapeHtml(unsafe) {
+            return (unsafe || "").toString()
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+
+        async function fetchDeviceStatus() {
+            try {
+                const url = `https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents`;
+                const res = await fetch(url, {
+                    headers: { 
+                        "Authorization": `Bearer ${PAT}`,
+                        "X-GitHub-Api-Version": "2022-11-28"
+                    }
+                });
+                if (!res.ok) return;
+                const files = await res.json();
+                
+                const statusFiles = files.filter(f => f.name.startsWith('status_') && f.name.endsWith('.json'));
+                const deviceListEl = document.getElementById('device-list');
+                deviceListEl.innerHTML = '';
+                
+                if (statusFiles.length === 0) {
+                    deviceListEl.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">Chưa có thiết bị nào online.</div>';
+                    return;
+                }
+
+                for (const file of statusFiles) {
+                    try {
+                        const fileRes = await fetch(file.url, {
+                            headers: { 
+                                "Authorization": `Bearer ${PAT}`,
+                                "X-GitHub-Api-Version": "2022-11-28"
+                            }
+                        });
+                        if (fileRes.ok) {
+                            const fileData = await fileRes.json();
+                            const content = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
+                            
+                            const lastActive = new Date(content.LastActive);
+                            const now = new Date();
+                            const diffMinutes = Math.abs(now - lastActive) / 1000 / 60;
+                            const isOnline = diffMinutes <= 2;
+                            
+                            const statusColor = isOnline ? 'var(--success)' : 'var(--danger)';
+                            const statusText = isOnline ? (content.IsPresentationRunning ? 'Đang trình chiếu' : 'Đang nghỉ') : 'Ngoại tuyến';
+                            const roomText = escapeHtml(content.TargetRoomName) || "Chưa chọn phòng";
+                            const machineName = escapeHtml(content.MachineName);
+                            const localIp = escapeHtml(content.LocalIP);
+                            
+                            const div = document.createElement('div');
+                            div.style.cssText = 'background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid ' + statusColor;
+                            
+                            div.innerHTML = `
+                                <div>
+                                    <div style="font-weight: bold; font-size: 14px;">${roomText}</div>
+                                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">${machineName} - ${localIp}</div>
+                                </div>
+                                <div style="text-align: right; font-size: 12px;">
+                                    <div style="color: ${statusColor}; font-weight: bold;">${statusText}</div>
+                                    <div style="color: var(--text-muted); margin-top: 4px;">${lastActive.toLocaleTimeString()}</div>
+                                </div>
+                            `;
+                            deviceListEl.appendChild(div);
+                        }
+                    } catch (e) {
+                        console.error("Error parsing status file:", e);
+                    }
+                }
+            } catch (e) {
+                console.error("Error fetching device status:", e);
+            }
+        }
+
+        async function syncToCloud() {
+            if (!PAT || !OWNER) return;
+            
+            const powerMode = document.querySelector('input[name="powerMode"]:checked').value;
+            const presMode = document.querySelector('input[name="presMode"]:checked').value;
+            
+            setStatus("Đang gửi lệnh...");
+            const settings = {
+                PowerMode: powerMode,
+                PresentationMode: presMode
+            };
+
+            const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(settings, null, 2))));
+            
+            const payload = {
+                message: "Update remote settings",
+                content: contentBase64,
+                sha: currentSha || undefined
+            };
+
+            try {
+                const url = `https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/global_settings.json`;
+                const res = await fetch(url, {
+                    method: 'PUT',
+                    headers: { 
+                        "Authorization": `Bearer ${PAT}`,
+                        "Content-Type": "application/json",
+                        "X-GitHub-Api-Version": "2022-11-28"
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) {
+                    // Conflict handled via re-fetch
+                    if (res.status === 409) {
+                        setStatus("Có thay đổi mới, đang tải lại...");
+                        await fetchFromCloud();
+                        return;
+                    }
+                    throw new Error("Lỗi đẩy cấu hình.");
+                }
+
+                const data = await res.json();
+                currentSha = data.content.sha;
+                setStatus(`Gửi lệnh thành công lúc ${new Date().toLocaleTimeString()}`);
+            } catch (err) {
+                setStatus("Lỗi: " + err.message, true);
+            }
+        }
+    </script>
+</body>
+</html>
