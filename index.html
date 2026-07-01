@@ -4,10 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>iOffice Remote</title>
-    <meta name="theme-color" content="#1e293b">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1055/1055666.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png">
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js');
+        }
+    </script>
     
     <style>
         :root {
@@ -197,7 +202,28 @@
         </div>
 
         <!-- Màn hình Điều khiển -->
-        <div id="remote-screen">
+        <div id="device-list-screen" style="display: none;">
+            <div class="card">
+                <h3 style="margin-top:0; color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Danh sách Thiết bị</h3>
+                <div id="device-list" style="margin-top: 15px;">
+                    <div style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">Đang tải danh sách...</div>
+                </div>
+            </div>
+
+            <button id="refreshDeviceListBtn" onclick="fetchDeviceList()" style="background: rgba(255,255,255,0.1); color: var(--text);">
+                <span class="loader" id="syncLoaderList"></span> Làm mới danh sách
+            </button>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="#" onclick="logout()" style="color: var(--danger); font-size: 0.9rem; text-decoration: none;">Đăng xuất khỏi tài khoản này</a>
+            </div>
+        </div>
+
+        <div id="device-control-screen" style="display: none;">
+            <div style="margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
+                <button onclick="backToDeviceList()" style="background: rgba(255,255,255,0.1); color: var(--text); padding: 8px 12px; font-size: 14px; width: auto; margin: 0;">⬅ Trở về</button>
+                <div id="currentDeviceNameDisplay" style="font-weight: bold; color: var(--primary); font-size: 1.1rem; text-align: right; flex: 1; padding-left: 10px;"></div>
+            </div>
             
             <div class="card">
                 <h3 style="margin-top:0; color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Chế độ Hiển thị</h3>
@@ -228,21 +254,9 @@
                 </p>
             </div>
 
-            <div class="card">
-                <h3 style="margin-top:0; color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Danh sách Thiết bị</h3>
-                <div id="device-list" style="margin-top: 15px;">
-                    <div style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">Đang tải danh sách...</div>
-                </div>
-            </div>
-
-            <button id="refreshBtn" onclick="fetchFromCloud()" style="background: rgba(255,255,255,0.1); color: var(--text);">
+            <button id="refreshBtn" onclick="fetchDeviceSettings()" style="background: rgba(255,255,255,0.1); color: var(--text);">
                 <span class="loader" id="syncLoader"></span> Làm mới trạng thái
             </button>
-            
-            <div style="text-align: center; margin-top: 20px;">
-                <a href="#" onclick="logout()" style="color: var(--danger); font-size: 0.9rem; text-decoration: none;">Đăng xuất khỏi thiết bị này</a>
-            </div>
-
         </div>
 
     </div>
@@ -254,15 +268,23 @@
         let PAT = localStorage.getItem('iOfficePat') || "";
         let OWNER = localStorage.getItem('iOfficeOwner') || "phamlbnb";
         let currentSha = "";
+        
+        let currentDeviceId = localStorage.getItem('iOfficeLastDevice') || "";
+        let currentDeviceName = localStorage.getItem('iOfficeLastDeviceName') || "";
 
         // UI Routing
         if (PAT) {
-            document.getElementById('remote-screen').style.display = 'block';
             if (!OWNER) {
                 // Determine owner from PAT
+                document.getElementById('device-list-screen').style.display = 'block';
                 determineOwnerAndFetch();
             } else {
-                fetchFromCloud();
+                if (currentDeviceId) {
+                    openDevice(currentDeviceId, currentDeviceName, true);
+                } else {
+                    document.getElementById('device-list-screen').style.display = 'block';
+                    fetchDeviceList();
+                }
             }
         } else {
             document.getElementById('setup-screen').style.display = 'block';
@@ -280,13 +302,15 @@
             PAT = input;
             localStorage.setItem('iOfficePat', PAT);
             document.getElementById('setup-screen').style.display = 'none';
-            document.getElementById('remote-screen').style.display = 'block';
+            document.getElementById('device-list-screen').style.display = 'block';
             determineOwnerAndFetch();
         }
 
         function logout() {
             localStorage.removeItem('iOfficePat');
             localStorage.removeItem('iOfficeOwner');
+            localStorage.removeItem('iOfficeLastDevice');
+            localStorage.removeItem('iOfficeLastDeviceName');
             location.reload();
         }
 
@@ -303,21 +327,141 @@
                 const data = await res.json();
                 OWNER = data.login;
                 localStorage.setItem('iOfficeOwner', OWNER);
-                fetchFromCloud();
+                fetchDeviceList();
             } catch (err) {
                 setStatus(err.message, true);
                 logout();
             }
         }
 
-        async function fetchFromCloud() {
+        async function fetchDeviceList() {
             if (!PAT || !OWNER) return;
+            document.getElementById('syncLoaderList').style.display = 'inline-block';
+            setStatus("Đang tải danh sách thiết bị...");
+            document.getElementById('refreshDeviceListBtn').disabled = true;
+
+            try {
+                const url = `https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents`;
+                const res = await fetch(url, {
+                    headers: { 
+                        "Authorization": `Bearer ${PAT}`,
+                        "X-GitHub-Api-Version": "2022-11-28"
+                    }
+                });
+
+                const deviceListEl = document.getElementById('device-list');
+                deviceListEl.innerHTML = '';
+
+                if (!res.ok) throw new Error("Lỗi tải danh sách thiết bị.");
+
+                const files = await res.json();
+                const statusFiles = files.filter(f => f.name.startsWith('status_') && f.name.endsWith('.json'));
+
+                if (statusFiles.length === 0) {
+                    deviceListEl.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">Chưa có thiết bị nào trực tuyến.</div>';
+                    setStatus("Hoàn thành.");
+                    return;
+                }
+
+                // Fetch each status file concurrently for speed
+                const fetchPromises = statusFiles.map(async file => {
+                    try {
+                        const fileRes = await fetch(file.url, {
+                            headers: { 
+                                "Authorization": `Bearer ${PAT}`,
+                                "X-GitHub-Api-Version": "2022-11-28"
+                            }
+                        });
+                        if (fileRes.ok) {
+                            const fileData = await fileRes.json();
+                            return JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
+                        }
+                    } catch (e) { console.error("Error parsing status:", e); }
+                    return null;
+                });
+
+                let devices = await Promise.all(fetchPromises);
+                devices = devices.filter(d => d != null);
+
+                if (devices.length === 0) {
+                    deviceListEl.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">Không thể đọc trạng thái thiết bị.</div>';
+                    setStatus("Hoàn thành.");
+                    return;
+                }
+
+                devices.sort((a,b) => new Date(b.LastActive) - new Date(a.LastActive));
+
+                for (const d of devices) {
+                    const lastActive = new Date(d.LastActive);
+                    const now = new Date();
+                    const diffMinutes = Math.abs(now - lastActive) / 1000 / 60;
+                    const isOnline = diffMinutes <= 2;
+                    
+                    const statusColor = isOnline ? 'var(--success)' : 'var(--danger)';
+                    const statusText = isOnline ? (d.IsPresentationRunning ? 'Đang trình chiếu' : 'Trực tuyến (Nghỉ)') : 'Ngoại tuyến';
+                    
+                    const nameText = escapeHtml(d.DeviceName) || escapeHtml(d.MachineName) || "Thiết bị vô danh";
+                    const roomText = escapeHtml(d.TargetRoomName) || "Chưa chọn phòng";
+                    const localIp = escapeHtml(d.LocalIP);
+                    
+                    const div = document.createElement('div');
+                    div.style.cssText = 'background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid ' + statusColor + '; cursor: pointer; transition: background 0.2s;';
+                    div.onclick = () => openDevice(d.DeviceUUID, nameText);
+                    
+                    div.innerHTML = `
+                        <div>
+                            <div style="font-weight: bold; font-size: 15px;">${nameText}</div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Phòng: ${roomText} | IP: ${localIp}</div>
+                        </div>
+                        <div style="text-align: right; font-size: 12px;">
+                            <div style="color: ${statusColor}; font-weight: bold;">${statusText}</div>
+                            <div style="color: var(--text-muted); margin-top: 4px;">${lastActive.toLocaleTimeString()}</div>
+                        </div>
+                    `;
+                    deviceListEl.appendChild(div);
+                }
+
+                setStatus(`Đã tải danh sách: ${new Date().toLocaleTimeString()}`);
+            } catch (err) {
+                setStatus("Lỗi mạng: " + err.message, true);
+            } finally {
+                document.getElementById('syncLoaderList').style.display = 'none';
+                document.getElementById('refreshDeviceListBtn').disabled = false;
+            }
+        }
+
+        function openDevice(id, name, noFetch = false) {
+            currentDeviceId = id;
+            currentDeviceName = name;
+            localStorage.setItem('iOfficeLastDevice', id);
+            localStorage.setItem('iOfficeLastDeviceName', name);
+            
+            document.getElementById('device-list-screen').style.display = 'none';
+            document.getElementById('device-control-screen').style.display = 'block';
+            document.getElementById('currentDeviceNameDisplay').innerText = name;
+            
+            if (!noFetch) fetchDeviceSettings();
+        }
+
+        function backToDeviceList() {
+            currentDeviceId = "";
+            currentDeviceName = "";
+            localStorage.removeItem('iOfficeLastDevice');
+            localStorage.removeItem('iOfficeLastDeviceName');
+            
+            document.getElementById('device-control-screen').style.display = 'none';
+            document.getElementById('device-list-screen').style.display = 'block';
+            fetchDeviceList();
+        }
+
+        async function fetchDeviceSettings() {
+            if (!PAT || !OWNER || !currentDeviceId) return;
             document.getElementById('syncLoader').style.display = 'inline-block';
-            setStatus("Đang tải dữ liệu...");
+            setStatus("Đang tải dữ liệu thiết bị...");
             document.getElementById('refreshBtn').disabled = true;
 
             try {
-                const url = `https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/global_settings.json`;
+                const url = `https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/devices/${currentDeviceId}/global_settings.json`;
                 const res = await fetch(url, {
                     headers: { 
                         "Authorization": `Bearer ${PAT}`,
@@ -326,7 +470,7 @@
                 });
 
                 if (res.status === 404) {
-                    setStatus("Chưa có cấu hình (Màn hình chưa online lần nào).");
+                    setStatus("Thiết bị chưa đẩy cấu hình lên mây.");
                     document.getElementById('refreshBtn').disabled = false;
                     document.getElementById('syncLoader').style.display = 'none';
                     return;
@@ -347,9 +491,7 @@
                     document.querySelector(`input[name="presMode"][value="${settings.PresentationMode}"]`).checked = true;
                 }
 
-                setStatus(`Đã đồng bộ: ${new Date().toLocaleTimeString()}`);
-                
-                await fetchDeviceStatus();
+                setStatus(`Đã cập nhật trạng thái: ${new Date().toLocaleTimeString()}`);
             } catch (err) {
                 setStatus("Lỗi mạng: " + err.message, true);
             } finally {
@@ -367,79 +509,11 @@
                  .replace(/'/g, "&#039;");
         }
 
-        async function fetchDeviceStatus() {
-            try {
-                const url = `https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents`;
-                const res = await fetch(url, {
-                    headers: { 
-                        "Authorization": `Bearer ${PAT}`,
-                        "X-GitHub-Api-Version": "2022-11-28"
-                    }
-                });
-                if (!res.ok) return;
-                const files = await res.json();
-                
-                const statusFiles = files.filter(f => f.name.startsWith('status_') && f.name.endsWith('.json'));
-                const deviceListEl = document.getElementById('device-list');
-                deviceListEl.innerHTML = '';
-                
-                if (statusFiles.length === 0) {
-                    deviceListEl.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">Chưa có thiết bị nào online.</div>';
-                    return;
-                }
-
-                for (const file of statusFiles) {
-                    try {
-                        const fileRes = await fetch(file.url, {
-                            headers: { 
-                                "Authorization": `Bearer ${PAT}`,
-                                "X-GitHub-Api-Version": "2022-11-28"
-                            }
-                        });
-                        if (fileRes.ok) {
-                            const fileData = await fileRes.json();
-                            const content = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
-                            
-                            const lastActive = new Date(content.LastActive);
-                            const now = new Date();
-                            const diffMinutes = Math.abs(now - lastActive) / 1000 / 60;
-                            const isOnline = diffMinutes <= 2;
-                            
-                            const statusColor = isOnline ? 'var(--success)' : 'var(--danger)';
-                            const statusText = isOnline ? (content.IsPresentationRunning ? 'Đang trình chiếu' : 'Đang nghỉ') : 'Ngoại tuyến';
-                            const roomText = escapeHtml(content.TargetRoomName) || "Chưa chọn phòng";
-                            const machineName = escapeHtml(content.MachineName);
-                            const localIp = escapeHtml(content.LocalIP);
-                            
-                            const div = document.createElement('div');
-                            div.style.cssText = 'background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid ' + statusColor;
-                            
-                            div.innerHTML = `
-                                <div>
-                                    <div style="font-weight: bold; font-size: 14px;">${roomText}</div>
-                                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">${machineName} - ${localIp}</div>
-                                </div>
-                                <div style="text-align: right; font-size: 12px;">
-                                    <div style="color: ${statusColor}; font-weight: bold;">${statusText}</div>
-                                    <div style="color: var(--text-muted); margin-top: 4px;">${lastActive.toLocaleTimeString()}</div>
-                                </div>
-                            `;
-                            deviceListEl.appendChild(div);
-                        }
-                    } catch (e) {
-                        console.error("Error parsing status file:", e);
-                    }
-                }
-            } catch (e) {
-                console.error("Error fetching device status:", e);
-            }
-        }
-
         async function syncToCloud() {
-            if (!PAT || !OWNER) return;
+            if (!PAT || !OWNER || !currentDeviceId) return;
             
-            const powerMode = document.querySelector('input[name="powerMode"]:checked').value;
-            const presMode = document.querySelector('input[name="presMode"]:checked').value;
+            const powerMode = document.querySelector('input[name="powerMode"]:checked')?.value || "Auto";
+            const presMode = document.querySelector('input[name="presMode"]:checked')?.value || "Schedule";
             
             setStatus("Đang gửi lệnh...");
             const settings = {
@@ -450,13 +524,13 @@
             const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(settings, null, 2))));
             
             const payload = {
-                message: "Update remote settings",
+                message: "Update remote settings via PWA",
                 content: contentBase64,
                 sha: currentSha || undefined
             };
 
             try {
-                const url = `https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/global_settings.json`;
+                const url = `https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/devices/${currentDeviceId}/global_settings.json`;
                 const res = await fetch(url, {
                     method: 'PUT',
                     headers: { 
@@ -468,10 +542,9 @@
                 });
 
                 if (!res.ok) {
-                    // Conflict handled via re-fetch
                     if (res.status === 409) {
-                        setStatus("Có thay đổi mới, đang tải lại...");
-                        await fetchFromCloud();
+                        setStatus("Có xung đột, đang tải lại...");
+                        await fetchDeviceSettings();
                         return;
                     }
                     throw new Error("Lỗi đẩy cấu hình.");
