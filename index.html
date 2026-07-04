@@ -232,8 +232,7 @@
                     <div style="font-size: 0.95rem; color: var(--text-muted);">Đang chiếu: <span id="status-maket" style="font-weight:bold; color:#fff;">--</span></div>
                 </div>
                 <div style="margin-top: 15px; display: flex; gap: 10px;">
-                    <button onclick="sendRemoteCommand('START_PRESENTATION')" style="flex:1; background: var(--success); color: #000; font-weight: bold;">▶ BẬT màn chiếu</button>
-                    <button onclick="sendRemoteCommand('STOP_PRESENTATION')" style="flex:1; background: var(--danger); font-weight: bold;">⏹ TẮT màn chiếu</button>
+                    <button id="togglePresentationBtn" onclick="togglePresentation()" style="flex:1; font-weight: bold; padding: 12px; background: #444; color: #fff;">Đang tải...</button>
                 </div>
             </div>
             
@@ -271,6 +270,17 @@
                     * <b>Tự động:</b> Màn hình sẽ tắt sau 1 phút nếu không có lịch trình chiếu.<br>
                     * Lệnh sẽ được màn hình phản hồi trong vòng tối đa 20 giây.
                 </p>
+            </div>
+            
+            <div class="card">
+                <h3 style="margin-top:0; color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Chế độ trình chiếu</h3>
+                <div class="segmented-control">
+                    <input type="radio" name="presMode" id="pres-schedule" value="Schedule" onchange="syncToCloud()">
+                    <label for="pres-schedule">Lịch công tác</label>
+                    
+                    <input type="radio" name="presMode" id="pres-maket" value="Maket" onchange="syncToCloud()">
+                    <label for="pres-maket">Ma-két</label>
+                </div>
             </div>
             
             <div class="card">
@@ -598,6 +608,19 @@
                     statusEl.innerText = isRunning ? "🟢 BẬT" : "🔴 TẮT";
                     statusEl.style.color = isRunning ? "var(--success)" : "var(--danger)";
                     document.getElementById('status-maket').innerText = st.CurrentActiveMaketName || (isRunning ? "Lịch công tác" : "--");
+
+                    const toggleBtn = document.getElementById('togglePresentationBtn');
+                    if (toggleBtn) {
+                        if (isRunning) {
+                            toggleBtn.innerText = "⏹ TẮT màn chiếu";
+                            toggleBtn.style.background = "var(--danger)";
+                            toggleBtn.onclick = () => togglePresentation(false);
+                        } else {
+                            toggleBtn.innerText = "▶ BẬT màn chiếu";
+                            toggleBtn.style.background = "var(--success)";
+                            toggleBtn.onclick = () => togglePresentation(true);
+                        }
+                    }
                 }
 
                 // 2. Fetch maket_rooms
@@ -629,6 +652,11 @@
                     
                     if (settings.PowerMode) {
                         const el = document.querySelector(`input[name="powerMode"][value="${settings.PowerMode}"]`);
+                        if(el) el.checked = true;
+                    }
+                    
+                    if (settings.PresentationMode) {
+                        const el = document.querySelector(`input[name="presMode"][value="${settings.PresentationMode}"]`);
                         if(el) el.checked = true;
                     }
                     
@@ -839,12 +867,25 @@
             syncToCloud(cmd);
         }
 
+        function togglePresentation(start) {
+            const toggleBtn = document.getElementById('togglePresentationBtn');
+            if (toggleBtn) {
+                toggleBtn.innerText = "Đang gửi lệnh...";
+                toggleBtn.style.background = "#444";
+                toggleBtn.onclick = null;
+            }
+            if (start) {
+                sendRemoteCommand('START_PRESENTATION');
+            } else {
+                sendRemoteCommand('STOP_PRESENTATION');
+            }
+        }
+
         async function syncToCloud(remoteCommand = "") {
             if (!PAT || !OWNER || !currentDeviceId) return;
             
             const powerMode = document.querySelector('input[name="powerMode"]:checked')?.value || "Auto";
-            // Presentation mode is removed from UI, default to Maket since they manage makets
-            const presMode = "Maket";
+            const presMode = document.querySelector('input[name="presMode"]:checked')?.value || "Maket";
             
             const selRoom = document.getElementById('sel-target-room').value;
             const selBg = document.getElementById('sel-target-bg').value;
