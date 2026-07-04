@@ -237,24 +237,6 @@
             </div>
             
             <div class="card">
-                <h3 style="margin-top:0; color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Cài đặt chung</h3>
-                
-                <div class="form-group">
-                    <label>Phòng hiển thị (Tivi đặt ở phòng nào?)</label>
-                    <select id="sel-target-room" onchange="syncToCloud()" style="width: 100%; padding: 10px; border-radius: 6px; background: rgba(0,0,0,0.2); color: white; border: 1px solid rgba(255,255,255,0.1);">
-                        <option value="">-- Đang tải danh sách phòng --</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Hình nền màn hình</label>
-                    <select id="sel-target-bg" onchange="syncToCloud()" style="width: 100%; padding: 10px; border-radius: 6px; background: rgba(0,0,0,0.2); color: white; border: 1px solid rgba(255,255,255,0.1);">
-                        <option value="">-- Đang tải danh sách hình nền --</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="card">
                 <h3 style="margin-top:0; color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Điều khiển Nguồn</h3>
                 <div class="segmented-control">
                     <input type="radio" name="powerMode" id="pm-auto" value="Auto" onchange="syncToCloud()">
@@ -271,7 +253,6 @@
                     * Lệnh sẽ được màn hình phản hồi trong vòng tối đa 20 giây.
                 </p>
             </div>
-            
             <div class="card">
                 <h3 style="margin-top:0; color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Chế độ trình chiếu</h3>
                 <div class="segmented-control">
@@ -282,8 +263,26 @@
                     <label for="pres-maket">Ma-két</label>
                 </div>
             </div>
-            
-            <div class="card">
+
+            <div class="card" id="maket-settings-card" style="display: none;">
+                <h3 style="margin-top:0; color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Cài đặt maket</h3>
+                
+                <div class="form-group">
+                    <label>Phòng hiển thị (Tivi đặt ở phòng nào?)</label>
+                    <select id="sel-target-room" onchange="syncToCloud()" style="width: 100%; padding: 10px; border-radius: 6px; background: rgba(0,0,0,0.2); color: white; border: 1px solid rgba(255,255,255,0.1);">
+                        <option value="">-- Đang tải danh sách phòng --</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Hình nền màn hình</label>
+                    <select id="sel-target-bg" onchange="syncToCloud()" style="width: 100%; padding: 10px; border-radius: 6px; background: rgba(0,0,0,0.2); color: white; border: 1px solid rgba(255,255,255,0.1);">
+                        <option value="">-- Đang tải danh sách hình nền --</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card" id="maket-list-card" style="display: none;">
                 <h3 style="margin-top:0; color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Quản lý Maket</h3>
                 <div id="maket-list" style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
                     <div style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">Vui lòng chọn phòng ở trên để xem Maket.</div>
@@ -612,11 +611,11 @@
                     const toggleBtn = document.getElementById('togglePresentationBtn');
                     if (toggleBtn) {
                         if (isRunning) {
-                            toggleBtn.innerText = "⏹ TẮT màn chiếu";
+                            toggleBtn.innerText = "⏹ Dừng Trình chiếu";
                             toggleBtn.style.background = "var(--danger)";
                             toggleBtn.onclick = () => togglePresentation(false);
                         } else {
-                            toggleBtn.innerText = "▶ BẬT màn chiếu";
+                            toggleBtn.innerText = "▶ Bắt đầu Trình chiếu";
                             toggleBtn.style.background = "var(--success)";
                             toggleBtn.onclick = () => togglePresentation(true);
                         }
@@ -659,6 +658,7 @@
                         const el = document.querySelector(`input[name="presMode"][value="${settings.PresentationMode}"]`);
                         if(el) el.checked = true;
                     }
+                    toggleMaketVisibility();
                     
                     // Render Room List
                     const selRoom = document.getElementById('sel-target-room');
@@ -881,11 +881,23 @@
             }
         }
 
+        function toggleMaketVisibility() {
+            const presMode = document.querySelector('input[name="presMode"]:checked')?.value || "Schedule";
+            if (presMode === "Maket") {
+                document.getElementById('maket-settings-card').style.display = 'block';
+                document.getElementById('maket-list-card').style.display = 'block';
+            } else {
+                document.getElementById('maket-settings-card').style.display = 'none';
+                document.getElementById('maket-list-card').style.display = 'none';
+            }
+        }
+
         async function syncToCloud(remoteCommand = "") {
+            toggleMaketVisibility();
             if (!PAT || !OWNER || !currentDeviceId) return;
             
             const powerMode = document.querySelector('input[name="powerMode"]:checked')?.value || "Auto";
-            const presMode = document.querySelector('input[name="presMode"]:checked')?.value || "Maket";
+            const presMode = document.querySelector('input[name="presMode"]:checked')?.value || "Schedule";
             
             const selRoom = document.getElementById('sel-target-room').value;
             const selBg = document.getElementById('sel-target-bg').value;
