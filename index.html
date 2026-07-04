@@ -904,7 +904,7 @@
         function togglePresentation(start) {
             const toggleBtn = document.getElementById('togglePresentationBtn');
             if (toggleBtn) {
-                toggleBtn.innerText = "Đang gửi lệnh...";
+                toggleBtn.innerText = start ? "⏳ Đang bật..." : "⏳ Đang dừng...";
                 toggleBtn.style.background = "#444";
                 toggleBtn.onclick = null;
             }
@@ -913,6 +913,15 @@
             } else {
                 sendRemoteCommand('STOP_PRESENTATION');
             }
+            
+            // Tạm thời tăng tốc độ kiểm tra lên mỗi 1.5 giây trong vòng 10 giây tiếp theo
+            // để bắt được trạng thái Tivi nhanh nhất có thể.
+            let fastChecks = 7;
+            let checkInt = setInterval(() => {
+                fetchDeviceDataFull();
+                fastChecks--;
+                if(fastChecks <= 0) clearInterval(checkInt);
+            }, 1500);
         }
 
         function toggleMaketVisibility() {
