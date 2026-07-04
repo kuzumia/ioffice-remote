@@ -289,7 +289,7 @@
                 </div>
             </div>
 
-            <button id="refreshBtn" onclick="fetchDeviceDataFull()" style="background: rgba(255,255,255,0.1); color: var(--text);">
+            <button id="refreshBtn" onclick="forceRefreshStatus()" style="background: rgba(255,255,255,0.1); color: var(--text);">
                 <span class="loader" id="syncLoader"></span> Làm mới trạng thái
             </button>
         </div>
@@ -588,18 +588,49 @@
         let globalMaketDetails = {};
         let currentMaketDetailsSha = "";
 
-        async function fetchDeviceDataFull() {
+        async function forceRefreshStatus() {
             if (!PAT || !OWNER || !currentDeviceId) return;
             document.getElementById('syncLoader').style.display = 'inline-block';
-            setStatus("Đang đồng bộ cấu hình máy...");
+            setStatus("Đang yêu cầu Tivi báo cáo trạng thái...");
             document.getElementById('refreshBtn').disabled = true;
+            await syncToCloud("FORCE_STATUS_UPDATE");
+            setTimeout(() => {
+                fetchDeviceDataFull();
+            }, 3000);
+        }
+
+        const fileETags = {};
+        async function etagFetch(url, options = {}) {
+            if (!options.headers) options.headers = {};
+            if (fileETags[url]) {
+                options.headers["If-None-Match"] = fileETags[url];
+            }
+            const res = await fetch(url, options);
+            if (res.status === 304) {
+                return { ok: true, notModified: true, status: 304 };
+            }
+            if (res.ok) {
+                const etag = res.headers.get("ETag");
+                if (etag) fileETags[url] = etag;
+            }
+            return res;
+        }
+
+        async function fetchDeviceDataFull() {
+            if (!PAT || !OWNER || !currentDeviceId) return;
+            // Only show loader if we don't have ETags yet (first load)
+            if (Object.keys(fileETags).length === 0) {
+                document.getElementById('syncLoader').style.display = 'inline-block';
+                setStatus("Đang đồng bộ cấu hình máy...");
+                document.getElementById('refreshBtn').disabled = true;
+            }
 
             try {
                 // 1. Fetch status
-                const resStatus = await fetch(`https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/status_${currentDeviceId}.json`, {
+                const resStatus = await etagFetch(`https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/status_${currentDeviceId}.json`, {
                     headers: { "Authorization": `Bearer ${PAT}`, "X-GitHub-Api-Version": "2022-11-28" }
                 });
-                if (resStatus.ok) {
+                if (resStatus.ok && !resStatus.notModified) {
                     const dataSt = await resStatus.json();
                     const st = JSON.parse(decodeURIComponent(escape(atob(dataSt.content))));
                     const isRunning = st.IsPresentationRunning;
@@ -623,10 +654,10 @@
                 }
 
                 // 2. Fetch maket_rooms
-                const resRooms = await fetch(`https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/devices/${currentDeviceId}/maket_rooms.json`, {
+                const resRooms = await etagFetch(`https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/devices/${currentDeviceId}/maket_rooms.json`, {
                     headers: { "Authorization": `Bearer ${PAT}`, "X-GitHub-Api-Version": "2022-11-28" }
                 });
-                if (resRooms.ok) {
+                if (resRooms.ok && !resRooms.notModified) {
                     const dataRm = await resRooms.json();
                     const encryptedRm = decodeURIComponent(escape(atob(dataRm.content)));
                     const decRm = await decryptAES(encryptedRm, PAT);
@@ -640,11 +671,11 @@
                 }
 
                 // 3. Fetch global_settings.json for PowerMode, TargetRoom, TargetBackgroundId
-                const resSettings = await fetch(`https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/devices/${currentDeviceId}/global_settings.json`, {
+                const resSettings = await etagFetch(`https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/devices/${currentDeviceId}/global_settings.json`, {
                     headers: { "Authorization": `Bearer ${PAT}`, "X-GitHub-Api-Version": "2022-11-28" }
                 });
                 
-                if (resSettings.ok) {
+                if (resSettings.ok && !resSettings.notModified) {
                     const dataSet = await resSettings.json();
                     currentSha = dataSet.sha;
                     const settings = JSON.parse(decodeURIComponent(escape(atob(dataSet.content))));
@@ -694,26 +725,29 @@
         async function loadMaketData() {
             try {
                 const [resSched, resDet] = await Promise.all([
-                    fetch(`https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/devices/${currentDeviceId}/schedule_data.json`, { headers: { "Authorization": `Bearer ${PAT}`, "X-GitHub-Api-Version": "2022-11-28" } }).catch(()=>null),
-                    fetch(`https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/devices/${currentDeviceId}/maket_details.json`, { headers: { "Authorization": `Bearer ${PAT}`, "X-GitHub-Api-Version": "2022-11-28" } }).catch(()=>null)
+                    etagFetch(`https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/devices/${currentDeviceId}/schedule_data.json`, { headers: { "Authorization": `Bearer ${PAT}`, "X-GitHub-Api-Version": "2022-11-28" } }).catch(()=>null),
+                    etagFetch(`https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/devices/${currentDeviceId}/maket_details.json`, { headers: { "Authorization": `Bearer ${PAT}`, "X-GitHub-Api-Version": "2022-11-28" } }).catch(()=>null)
                 ]);
                 
-                if (resDet && resDet.ok) {
+                let changed = false;
+                if (resDet && resDet.ok && !resDet.notModified) {
                     const d = await resDet.json();
                     currentMaketDetailsSha = d.sha;
                     const enc = decodeURIComponent(escape(atob(d.content)));
                     const dec = await decryptAES(enc, PAT);
                     if (dec.startsWith("{")) globalMaketDetails = JSON.parse(dec);
+                    changed = true;
                 }
                 
-                if (resSched && resSched.ok) {
+                if (resSched && resSched.ok && !resSched.notModified) {
                     const d = await resSched.json();
                     const enc = decodeURIComponent(escape(atob(d.content)));
                     const dec = await decryptAES(enc, PAT);
                     if (dec.startsWith("[")) globalSchedules = JSON.parse(dec);
+                    changed = true;
                 }
                 
-                renderMaketList();
+                if (changed || Object.keys(fileETags).length <= 2) renderMaketList();
             } catch (e) { console.error("Maket Load Error", e); }
         }
         
@@ -836,14 +870,14 @@
         }
 
         
-        // Auto update status every 10 seconds when in control screen
+        // Auto update status every 5 seconds when in control screen
         function startStatusInterval() {
             if (window.statusInterval) clearInterval(window.statusInterval);
             window.statusInterval = setInterval(() => {
                 if (document.getElementById('device-control-screen').style.display === 'block') {
                     fetchDeviceDataFull();
                 }
-            }, 10000);
+            }, 5000);
         }
 
         async function fetchDeviceSettings() {
