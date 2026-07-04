@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ioffice-remote-v2';
+const CACHE_NAME = 'ioffice-remote-v3';
 const urlsToCache = [
   './index.html',
   './manifest.json'
