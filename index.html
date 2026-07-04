@@ -630,25 +630,35 @@
                 const resStatus = await etagFetch(`https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/status_${currentDeviceId}.json`, {
                     headers: { "Authorization": `Bearer ${PAT}`, "X-GitHub-Api-Version": "2022-11-28" }
                 });
-                if (resStatus.ok && !resStatus.notModified) {
-                    const dataSt = await resStatus.json();
-                    const st = JSON.parse(decodeURIComponent(escape(atob(dataSt.content))));
-                    const isRunning = st.IsPresentationRunning;
-                    const statusEl = document.getElementById('status-running');
-                    statusEl.innerText = isRunning ? "🟢 BẬT" : "🔴 TẮT";
-                    statusEl.style.color = isRunning ? "var(--success)" : "var(--danger)";
-                    document.getElementById('status-maket').innerText = st.CurrentActiveMaketName || (isRunning ? "Lịch công tác" : "--");
-
-                    const toggleBtn = document.getElementById('togglePresentationBtn');
-                    if (toggleBtn) {
-                        if (isRunning) {
-                            toggleBtn.innerText = "⏹ Dừng Trình chiếu";
-                            toggleBtn.style.background = "var(--danger)";
-                            toggleBtn.onclick = () => togglePresentation(false);
-                        } else {
-                            toggleBtn.innerText = "▶ Bắt đầu Trình chiếu";
-                            toggleBtn.style.background = "var(--success)";
-                            toggleBtn.onclick = () => togglePresentation(true);
+                if (resStatus.ok) {
+                    let isRunning = window.lastKnownIsRunning;
+                    
+                    if (!resStatus.notModified) {
+                        const dataSt = await resStatus.json();
+                        const st = JSON.parse(decodeURIComponent(escape(atob(dataSt.content))));
+                        isRunning = st.IsPresentationRunning;
+                        window.lastKnownIsRunning = isRunning;
+                        window.commandPending = false; // PC đã phản hồi, xóa trạng thái chờ
+                        
+                        document.getElementById('status-maket').innerText = st.CurrentActiveMaketName || (isRunning ? "Lịch công tác" : "--");
+                    }
+                    
+                    if (isRunning !== undefined) {
+                        const statusEl = document.getElementById('status-running');
+                        statusEl.innerText = isRunning ? "🟢 BẬT" : "🔴 TẮT";
+                        statusEl.style.color = isRunning ? "var(--success)" : "var(--danger)";
+                        
+                        const toggleBtn = document.getElementById('togglePresentationBtn');
+                        if (toggleBtn && !window.commandPending) {
+                            if (isRunning) {
+                                toggleBtn.innerText = "⏹ Dừng Trình chiếu";
+                                toggleBtn.style.background = "var(--danger)";
+                                toggleBtn.onclick = () => togglePresentation(false);
+                            } else {
+                                toggleBtn.innerText = "▶ Bắt đầu Trình chiếu";
+                                toggleBtn.style.background = "var(--success)";
+                                toggleBtn.onclick = () => togglePresentation(true);
+                            }
                         }
                     }
                 }
@@ -897,6 +907,9 @@
 
         let syncQueue = Promise.resolve();
         
+        window.commandPending = false;
+        window.lastKnownIsRunning = undefined;
+        
         function sendRemoteCommand(cmd) {
             syncToCloud(cmd);
         }
@@ -913,6 +926,11 @@
             } else {
                 sendRemoteCommand('STOP_PRESENTATION');
             }
+            
+            window.commandPending = true;
+            setTimeout(() => {
+                window.commandPending = false; // Hủy chờ sau 12 giây nếu Tivi không phản hồi (offline)
+            }, 12000);
             
             // Tạm thời tăng tốc độ kiểm tra lên mỗi 1.5 giây trong vòng 10 giây tiếp theo
             // để bắt được trạng thái Tivi nhanh nhất có thể.
