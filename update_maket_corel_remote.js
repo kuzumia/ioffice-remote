@@ -47,10 +47,10 @@ window.openMaketModal = function(eventId, evtContent) {
         // Patch legacy global objects that lack coordinates
         currentMaketObjects.forEach((o, i) => {
             if (o.OffsetY === undefined || o.OffsetY === 0) {
-                if (i === 0) { o.OffsetY = 65; }
-                else if (i === 1) { o.OffsetY = 200; }
-                else if (i === 2) { o.OffsetY = 380; }
-                else if (i === 3) { o.OffsetY = 550; }
+                if (i === 0) { o.OffsetY = 96; }
+                else if (i === 1) { o.OffsetY = 250; }
+                else if (i === 2) { o.OffsetY = 518; }
+                else if (i === 3) { o.OffsetY = 922; }
             }
         });
     }
