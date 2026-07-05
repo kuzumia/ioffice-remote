@@ -458,6 +458,10 @@ window.updatePreview = function() {
             div.style.pointerEvents = 'auto';
             div.style.cursor = 'pointer';
             div.style.zIndex = '10';
+            
+            // DEBUG: Show boxes visually
+            div.style.border = '1px dashed #00ff00';
+            div.style.backgroundColor = 'rgba(255,255,255,0.1)';
 
             if (obj.Stroke) {
                 let sSize = Number(String(obj.StrokeSize !== undefined && obj.StrokeSize !== null ? obj.StrokeSize : 1.5).replace(',', '.')) || 1.5;
