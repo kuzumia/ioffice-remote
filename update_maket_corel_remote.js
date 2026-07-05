@@ -44,15 +44,13 @@ window.openMaketModal = function(eventId, evtContent) {
     if (c.MaketObjects && c.MaketObjects.length > 0) {
         currentMaketObjects = JSON.parse(JSON.stringify(c.MaketObjects)); // Deep copy
         
-        // Patch legacy global objects that lack Box coordinates
+        // Patch legacy global objects that lack coordinates
         currentMaketObjects.forEach((o, i) => {
-            if (o.BoxX === undefined) {
-                if (i === 0) { o.BoxX=0.5; o.BoxY=0.5; o.BoxW=9; o.BoxH=0.8; o.Valign='middle'; }
-                else if (i === 1) { o.BoxX=0.5; o.BoxY=1.3; o.BoxW=9; o.BoxH=1.2; o.Valign='middle'; }
-                else if (i === 2) { o.BoxX=0.5; o.BoxY=2.7; o.BoxW=9; o.BoxH=2.0; o.Valign='top'; }
-                else if (i === 3) { o.BoxX=3.5; o.BoxY=4.8; o.BoxW=5.5; o.BoxH=0.5; o.Valign='bottom'; }
-                else { o.BoxX=0.5; o.BoxY=0.5; o.BoxW=9; o.BoxH=1.0; o.Valign='top'; }
-                o.OffsetX = 0; o.OffsetY = 0; // Wipe old garbage pixel offsets
+            if (o.OffsetY === undefined || o.OffsetY === 0) {
+                if (i === 0) { o.OffsetY = 65; }
+                else if (i === 1) { o.OffsetY = 183; }
+                else if (i === 2) { o.OffsetY = 486; }
+                else if (i === 3) { o.OffsetY = 928; }
             }
         });
     }
@@ -193,12 +191,12 @@ window.openMaketModal = function(eventId, evtContent) {
 
                             <div style="display:flex; gap:5px;">
                                 <div style="flex:1;">
-                                    <label style="font-size:11px; color:#555; display:block; margin-bottom:3px;">Dịch X (inch)</label>
-                                    <input id="prop-offsetx" oninput="window.updateObjectProperty('OffsetX', this.value)" type="number" step="0.1" style="width:100%; padding:4px; border:1px solid #ccc; border-radius:4px;">
+                                    <label style="font-size:11px; color:#555; display:block; margin-bottom:3px;">Tọa độ X (pixels)</label>
+                                    <input id="prop-offsetx" oninput="window.updateObjectProperty('OffsetX', this.value)" type="number" style="width:100%; padding:4px; border:1px solid #ccc; border-radius:4px;">
                                 </div>
                                 <div style="flex:1;">
-                                    <label style="font-size:11px; color:#555; display:block; margin-bottom:3px;">Dịch Y (inch)</label>
-                                    <input id="prop-offsety" oninput="window.updateObjectProperty('OffsetY', this.value)" type="number" step="0.1" style="width:100%; padding:4px; border:1px solid #ccc; border-radius:4px;">
+                                    <label style="font-size:11px; color:#555; display:block; margin-bottom:3px;">Tọa độ Y (pixels)</label>
+                                    <input id="prop-offsety" oninput="window.updateObjectProperty('OffsetY', this.value)" type="number" style="width:100%; padding:4px; border:1px solid #ccc; border-radius:4px;">
                                 </div>
                             </div>
                         </div>
@@ -415,53 +413,33 @@ window.updatePreview = function() {
             if (obj.TextCase === 'uppercase') text = text.toUpperCase();
             else if (obj.TextCase === 'lowercase') text = text.toLowerCase();
             
-            // Use PPTX box coordinates mapped to 1920x1080 (1 inch = 192px)
-            let bxStr = String(obj.BoxX !== undefined && obj.BoxX !== null ? obj.BoxX : 0).replace(',', '.');
             let oxStr = String(obj.OffsetX !== undefined && obj.OffsetX !== null ? obj.OffsetX : 0).replace(',', '.');
-            let byStr = String(obj.BoxY !== undefined && obj.BoxY !== null ? obj.BoxY : 0).replace(',', '.');
             let oyStr = String(obj.OffsetY !== undefined && obj.OffsetY !== null ? obj.OffsetY : 0).replace(',', '.');
-            let bwStr = String(obj.BoxW !== undefined && obj.BoxW !== null ? obj.BoxW : 9).replace(',', '.');
-            let bhStr = String(obj.BoxH !== undefined && obj.BoxH !== null ? obj.BoxH : 1).replace(',', '.');
-
-            let bx = Number(bxStr) || 0;
             let ox = Number(oxStr) || 0;
-            let xPx = (bx + ox) * 192;
-
-            let by = Number(byStr) || 0;
             let oy = Number(oyStr) || 0;
-            let yPx = (by + oy) * 192;
-
-            let bw = Number(bwStr) || 9;
-            let bh = Number(bhStr) || 1;
-            let wPx = bw * 192;
-            let hPx = bh * 192;
 
             let div = document.createElement('div');
+            
+            // Replicate app.js styling exactly for WYSIWYG
             div.style.position = 'absolute';
-            div.style.left = xPx + 'px';
-            div.style.top = yPx + 'px';
-            div.style.width = wPx + 'px';
-            div.style.height = hPx + 'px';
-            div.style.display = 'flex';
-            div.style.justifyContent = obj.Align === 'center' ? 'center' : obj.Align === 'right' ? 'flex-end' : 'flex-start';
-            div.style.alignItems = obj.Valign === 'middle' ? 'center' : obj.Valign === 'bottom' ? 'flex-end' : 'flex-start';
-            div.style.textAlign = obj.Align;
+            div.style.top = '0px';
+            div.style.left = '0px';
+            div.style.width = '100%';
+            div.style.textAlign = obj.Align || 'center';
             div.style.fontFamily = obj.Font || 'Arial';
             
             let fsize = Number(String(obj.FontSize !== undefined && obj.FontSize !== null ? obj.FontSize : 32).replace(',', '.')) || 32;
-            div.style.fontSize = (1080 * fsize / 405) + 'px';
+            div.style.fontSize = fsize + 'pt';
             div.style.color = obj.Color || '#FFFFFF';
             div.style.fontWeight = 'bold';
+            div.style.transform = `translate(${ox}px, ${oy}px)`;
+            div.style.padding = '0 40px';
             div.style.boxSizing = 'border-box';
             div.style.lineHeight = '1.2';
             div.style.textShadow = '2px 2px 4px rgba(0,0,0,0.5)';
             div.style.pointerEvents = 'auto';
             div.style.cursor = 'pointer';
             div.style.zIndex = '10';
-            
-            // DEBUG: Show boxes visually
-            div.style.border = '1px dashed #00ff00';
-            div.style.backgroundColor = 'rgba(255,255,255,0.1)';
 
             if (obj.Stroke) {
                 let sSize = Number(String(obj.StrokeSize !== undefined && obj.StrokeSize !== null ? obj.StrokeSize : 1.5).replace(',', '.')) || 1.5;
