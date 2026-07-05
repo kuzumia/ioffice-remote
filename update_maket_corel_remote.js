@@ -23,7 +23,7 @@ window.openMaketModal = function(eventId, evtContent) {
     
     // Set active bg url
     currentActiveBgUrl = '';
-    let selectedBg = availableBgs.find(b => b.Id === currentActiveBgId);
+    let selectedBg = availableBgs.find(b => b.Id == currentActiveBgId);
     if (selectedBg) currentActiveBgUrl = selectedBg.FileName.startsWith('/') ? '.' + selectedBg.FileName : selectedBg.FileName;
 
     // Load Maket Objects from remote settings default
@@ -57,7 +57,7 @@ window.openMaketModal = function(eventId, evtContent) {
         if (sl.MaketObjects) currentMaketObjects = JSON.parse(JSON.stringify(sl.MaketObjects));
         if (sl.activeBgId) {
             currentActiveBgId = sl.activeBgId;
-            let b = availableBgs.find(x => x.Id === currentActiveBgId);
+            let b = availableBgs.find(x => x.Id == currentActiveBgId);
             if (b) currentActiveBgUrl = b.FileName.startsWith('/') ? '.' + b.FileName : b.FileName;
         }
     }
@@ -78,7 +78,7 @@ window.openMaketModal = function(eventId, evtContent) {
     let bgListHtml = availableBgs.map(bg => {
         let imgUrl = bg.FileName.startsWith('/') ? '.' + bg.FileName : bg.FileName;
         return `
-        <div class="bg-item-select" data-id="${bg.Id}" data-url="${imgUrl}" style="cursor:pointer; border:3px solid ${bg.Id === currentActiveBgId ? '#4caf50' : 'transparent'}; border-radius:6px; padding:2px; transition:0.2s; position:relative; margin-bottom: 8px;" onclick="window.selectBackground('${bg.Id}', '${imgUrl}')">
+        <div class="bg-item-select" data-id="${bg.Id}" data-url="${imgUrl}" style="cursor:pointer; border:3px solid ${bg.Id == currentActiveBgId ? '#4caf50' : 'transparent'}; border-radius:6px; padding:2px; transition:0.2s; position:relative; margin-bottom: 8px;" onclick="window.selectBackground('${bg.Id}', '${imgUrl}')">
             <img src="${imgUrl}" style="width:100%; height:80px; object-fit:cover; border-radius:4px; display:block;" onerror="this.src='./backgrounds/default.jpg'">
         </div>`;
     }).join('');
@@ -231,7 +231,7 @@ window.selectBackground = function(id, url) {
     currentActiveBgUrl = url;
     let bgItems = document.querySelectorAll('.bg-item-select');
     bgItems.forEach(x => {
-        if (x.getAttribute('data-id') === id) x.style.borderColor = '#4caf50';
+        if (x.getAttribute('data-id') == id) x.style.borderColor = '#4caf50';
         else x.style.borderColor = 'transparent';
     });
     window.updatePreview();
@@ -250,7 +250,7 @@ window.switchTab = function(tab) {
 window.renderLayerList = function() {
     let listHtml = '';
     currentMaketObjects.forEach((obj) => {
-        let isActive = obj.Id === currentActiveObjectId;
+        let isActive = obj.Id == currentActiveObjectId;
         listHtml += `
         <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 10px; border-bottom:1px solid #eee; background:${isActive?'#e3f2fd':'#fff'}; cursor:pointer;" onclick="window.selectObject('${obj.Id}')">
             <span style="font-weight:${isActive?'bold':'normal'}; color:${isActive?'#0d6efd':'#333'}; font-size:12px; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(obj.Name)}</span>
@@ -325,7 +325,7 @@ window.addObject = function() {
 window.renderPropertyPanel = function() {
     let panel = document.getElementById('edit-property-panel');
     let textArea = document.getElementById('edit-main-textarea');
-    let obj = currentMaketObjects.find(o => o.Id === currentActiveObjectId);
+    let obj = currentMaketObjects.find(o => o.Id == currentActiveObjectId);
     
     if (!obj) {
         panel.style.opacity = '0.5';
@@ -357,7 +357,7 @@ window.renderPropertyPanel = function() {
 
 window.updateActiveText = function(text) {
     if (!currentActiveObjectId) return;
-    let obj = currentMaketObjects.find(o => o.Id === currentActiveObjectId);
+    let obj = currentMaketObjects.find(o => o.Id == currentActiveObjectId);
     if (obj) {
         obj.Text = text;
         window.updatePreview();
@@ -366,7 +366,7 @@ window.updateActiveText = function(text) {
 
 window.updateObjectProperty = function(key, value) {
     if (!currentActiveObjectId) return;
-    let obj = currentMaketObjects.find(o => o.Id === currentActiveObjectId);
+    let obj = currentMaketObjects.find(o => o.Id == currentActiveObjectId);
     if (obj) {
         if (key === 'Stroke') obj[key] = value === 'true' || value === true;
         else if (['FontSize', 'StrokeSize', 'OffsetX', 'OffsetY'].includes(key)) obj[key] = Number(value) || 0;
@@ -386,7 +386,7 @@ window.updatePreview = function() {
     board.style.transform = `scale(${scale})`;
     
     if (currentActiveBgUrl && currentActiveBgUrl.trim() !== '') {
-        board.style.backgroundImage = `url('${currentActiveBgUrl}')`;
+        board.style.background = `url('${currentActiveBgUrl}') center/cover no-repeat`;
     } else {
         board.style.background = 'radial-gradient(circle at center, #1b3a6e 0%, #0b1a2e 100%)';
     }
@@ -394,7 +394,7 @@ window.updatePreview = function() {
     let html = '';
     
     currentMaketObjects.forEach(obj => {
-        let text = obj.Text || "";
+        let text = String(obj.Text || "");
         text = text.replace(/{{EventContent}}/g, currentMaketEvtContent);
         text = text.replace(/{{EventTime}}/g, currentMaketFormattedDate);
         text = text.replace(/\\n/g, "<br>").replace(/\n/g, "<br>");
@@ -403,23 +403,35 @@ window.updatePreview = function() {
         else if (obj.TextCase === 'lowercase') text = text.toLowerCase();
         
         // Use PPTX box coordinates mapped to 1920x1080 (1 inch = 192px)
-        let xPx = ((obj.BoxX || 0) + (obj.OffsetX || 0)) * 192;
-        let yPx = ((obj.BoxY || 0) + (obj.OffsetY || 0)) * 192;
-        let wPx = (obj.BoxW || 9) * 192;
-        let hPx = (obj.BoxH || 1) * 192;
+        let bx = Number(obj.BoxX) || 0;
+        let ox = Number(obj.OffsetX) || 0;
+        let xPx = (bx + ox) * 192;
+
+        let by = Number(obj.BoxY) || 0;
+        let oy = Number(obj.OffsetY) || 0;
+        let yPx = (by + oy) * 192;
+
+        let bw = Number(obj.BoxW) || 9;
+        let bh = Number(obj.BoxH) || 1;
+        let wPx = bw * 192;
+        let hPx = bh * 192;
 
         let jc = obj.Align === 'center' ? 'center' : obj.Align === 'right' ? 'flex-end' : 'flex-start';
         let ai = obj.Valign === 'middle' ? 'center' : obj.Valign === 'bottom' ? 'flex-end' : 'flex-start';
 
-        let style = `position:absolute; left:${xPx}px; top:${yPx}px; width:${wPx}px; height:${hPx}px; display:flex; justify-content:${jc}; align-items:${ai}; text-align:${obj.Align}; font-family:${obj.Font}; font-size:calc(1080px * (${obj.FontSize} / 405)); color:${obj.Color}; font-weight:bold; box-sizing: border-box; line-height: 1.2; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); pointer-events:auto; cursor:pointer;`;
+        let safeFont = obj.Font ? obj.Font.replace(/"/g, "'") : 'Arial';
+        let style = `position:absolute; left:${xPx}px; top:${yPx}px; width:${wPx}px; height:${hPx}px; display:flex; justify-content:${jc}; align-items:${ai}; text-align:${obj.Align}; font-family:${safeFont}; font-size:calc(1080px * (${obj.FontSize} / 405)); color:${obj.Color}; font-weight:bold; box-sizing: border-box; line-height: 1.2; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); pointer-events:auto; cursor:pointer;`;
         
         if (obj.Stroke) {
             style += `-webkit-text-stroke: ${obj.StrokeSize}px ${obj.StrokeColor};`;
         }
         
-        let outline = obj.Id === currentActiveObjectId ? 'outline: 3px dashed #dc3545; outline-offset: 5px; z-index:100;' : 'z-index:10;';
+        let outline = obj.Id == currentActiveObjectId ? 'outline: 3px dashed #dc3545; outline-offset: 5px; z-index:100;' : 'z-index:10;';
         
-        html += `<div style="${style} ${outline}" onclick="window.selectObject('${obj.Id}')">${text}</div>`;
+        let safeStyle = style.replace(/"/g, "'");
+        let safeOutline = outline.replace(/"/g, "'");
+
+        html += `<div style="${safeStyle} ${safeOutline}" onclick="window.selectObject('${obj.Id}')">${text}</div>`;
     });
     
     board.innerHTML = html;
