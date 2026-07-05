@@ -110,7 +110,8 @@ window.openMaketModal = function(eventId, evtContent) {
                     </div>
                     
                     <div style="display:flex; flex-direction:column;">
-                        <textarea id="edit-main-textarea" oninput="window.updateActiveText(this.value)" disabled placeholder="Chọn một đối tượng trong tab Thuộc tính để sửa..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px; font-family:inherit; resize:none; font-size: 14px; background: #fff; height: 60px;"></textarea>
+                          <label style="font-weight:bold; font-size:12px; color:#333; margin-bottom:5px;">Nội dung của Đối tượng đang chọn: <span id="prop-xy-display" style="color:red; font-weight:normal; font-size:12px; margin-left:10px;"></span></label>
+                          <textarea id="edit-main-textarea" oninput="window.updateActiveText(this.value)" disabled placeholder="Chọn một đối tượng trong tab Thuộc tính để sửa..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px; font-family:inherit; resize:none; font-size: 14px; background: #fff; height: 60px;"></textarea>
                     </div>
                 </div>
                 
@@ -135,9 +136,9 @@ window.openMaketModal = function(eventId, evtContent) {
                             <div style="display:flex; gap:5px; margin-bottom:5px;">
                                 <div style="flex:2;">
                                     <label style="font-size:11px; color:#555; display:block; margin-bottom:3px;">Font</label>
-                                    <select id="prop-font" onchange="window.updateObjectProperty('Font', this.value)" style="width:100%; padding:4px; border:1px solid #ccc; border-radius:4px;">
+                                    <select id="prop-font" onchange="window.updateObjectProperty('Font', this.value)" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; font-size:12px;">
                                         <option value="'Inter', sans-serif">Inter</option>
-                                        <option value="'Times New Roman', serif">Times New Roman</option>
+                                        <option value="Times New Roman">Times New Roman</option>
                                         <option value="Arial">Arial</option>
                                     </select>
                                 </div>
@@ -331,27 +332,53 @@ window.deleteObject = function(id, event) {
 }
 
 window.addObject = function() {
+    let baseObj = currentMaketObjects.find(x => x.Id == currentActiveObjectId) || currentMaketObjects[currentMaketObjects.length - 1] || {};
     let newObj = {
         Id: 'obj_' + Date.now() + Math.random().toString(36).substr(2, 5),
         Name: "Văn bản mới",
         Text: "Văn bản mới",
-        Font: "'Times New Roman', serif",
-        FontSize: 48,
-        Color: "#ffff00",
-        TextCase: "none",
-        Stroke: false,
-        StrokeColor: "#ff0000",
-        StrokeSize: 1.5,
-        OffsetX: 0,
-        OffsetY: 0,
-        Align: "center",
-        BoxX: 0.5, BoxY: 0.5, BoxW: 9, BoxH: 1.0, Valign: 'top'
+        Font: baseObj.Font || "Times New Roman",
+        FontSize: baseObj.FontSize || 48,
+        Color: baseObj.Color || "#ffff00",
+        TextCase: baseObj.TextCase || "none",
+        Stroke: baseObj.Stroke || false,
+        StrokeColor: baseObj.StrokeColor || "#ff0000",
+        StrokeSize: baseObj.StrokeSize || 1.5,
+        OffsetX: (baseObj.OffsetX || 0),
+        OffsetY: (baseObj.OffsetY || 0) + 50,
+        Align: baseObj.Align || "center",
+        BoxX: 0.5, BoxY: 0.5, BoxW: 9, BoxH: 1.0, Valign: 'middle'
     };
-    currentMaketObjects.push(newObj);
+    let baseIndex = currentMaketObjects.findIndex(x => x.Id == currentActiveObjectId);
+    if (baseIndex >= 0) {
+        currentMaketObjects.splice(baseIndex + 1, 0, newObj);
+    } else {
+        currentMaketObjects.push(newObj);
+    }
     currentActiveObjectId = newObj.Id;
     window.renderLayerList();
     window.renderPropertyPanel();
     window.updatePreview();
+}
+
+window.resetMaketToDefault = function() {
+    if(confirm("Xoá maket tuỳ chỉnh của lịch này và khôi phục về mặc định?")) {
+        if (currentMaketEvt && currentMaketEvt.Id) {
+            if (window.globalMaketDetails && window.globalMaketDetails[currentMaketEvt.Id]) {
+                delete window.globalMaketDetails[currentMaketEvt.Id];
+                if (window.saveMaketDetails) window.saveMaketDetails();
+            }
+        }
+        let payload = JSON.stringify({
+            Action: "DELETE_EVENT_MAKET",
+            EventId: currentMaketEvt ? currentMaketEvt.Id : ""
+        });
+        if (socket && currentDeviceId) {
+            socket.emit("admin_action", currentDeviceId, "WEB_EVENT|" + payload);
+        }
+        alert("Đã khôi phục mặc định!");
+        document.getElementById('maketModal').remove();
+    }
 }
 
 window.renderPropertyPanel = function() {
@@ -363,6 +390,8 @@ window.renderPropertyPanel = function() {
         panel.style.opacity = '0.5';
         panel.style.pointerEvents = 'none';
         document.getElementById('prop-panel-title').innerText = "Chưa chọn đối tượng";
+        let xyDisp = document.getElementById('prop-xy-display');
+        if (xyDisp) xyDisp.innerText = '';
         textArea.value = '';
         textArea.disabled = true;
         return;
@@ -375,7 +404,10 @@ window.renderPropertyPanel = function() {
     textArea.disabled = false;
     
     document.getElementById('prop-name').value = obj.Name;
-    document.getElementById('prop-font').value = obj.Font;
+    let xyDisp = document.getElementById('prop-xy-display');
+    if (xyDisp) xyDisp.innerText = `[X: ${obj.OffsetX || 0}, Y: ${obj.OffsetY || 0}]`;
+    
+    document.getElementById('prop-font').value = obj.Font || "Times New Roman";
     document.getElementById('prop-size').value = obj.FontSize;
     document.getElementById('prop-color').value = obj.Color;
     document.getElementById('prop-color-bar').style.background = obj.Color;
@@ -404,8 +436,10 @@ window.nudgePosition = function(dx, dy) {
         let newY = curY + dy;
         obj.OffsetX = newX;
         obj.OffsetY = newY;
-        document.getElementById('prop-offsetx').value = newX;
-        document.getElementById('prop-offsety').value = newY;
+        let pX = document.getElementById('prop-offsetx'); if (pX) pX.value = newX;
+        let pY = document.getElementById('prop-offsety'); if (pY) pY.value = newY;
+        let xyDisp = document.getElementById('prop-xy-display');
+        if (xyDisp) xyDisp.innerText = `[X: ${newX}, Y: ${newY}]`;
         window.updatePreview();
     }
 }
@@ -426,6 +460,11 @@ window.updateObjectProperty = function(key, value) {
         if (key === 'Stroke') obj[key] = value === 'true' || value === true;
         else if (['FontSize', 'StrokeSize', 'OffsetX', 'OffsetY'].includes(key)) obj[key] = Number(value) || 0;
         else obj[key] = value;
+        
+        if (key === 'OffsetX' || key === 'OffsetY') {
+            let xyDisp = document.getElementById('prop-xy-display');
+            if (xyDisp) xyDisp.innerText = `[X: ${obj.OffsetX || 0}, Y: ${obj.OffsetY || 0}]`;
+        }
         
         if (key === 'Name') window.renderLayerList();
         window.updatePreview();
