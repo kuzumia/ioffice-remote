@@ -168,12 +168,12 @@ window.openMaketModal = function(eventId, evtContent) {
 
                             <div style="display:flex; gap:5px;">
                                 <div style="flex:1;">
-                                    <label style="font-size:11px; color:#555; display:block; margin-bottom:3px;">X (px)</label>
-                                    <input id="prop-offsetx" oninput="window.updateObjectProperty('OffsetX', this.value)" type="number" style="width:100%; padding:4px; border:1px solid #ccc; border-radius:4px;">
+                                    <label style="font-size:11px; color:#555; display:block; margin-bottom:3px;">Dịch X (inch)</label>
+                                    <input id="prop-offsetx" oninput="window.updateObjectProperty('OffsetX', this.value)" type="number" step="0.1" style="width:100%; padding:4px; border:1px solid #ccc; border-radius:4px;">
                                 </div>
                                 <div style="flex:1;">
-                                    <label style="font-size:11px; color:#555; display:block; margin-bottom:3px;">Y (px)</label>
-                                    <input id="prop-offsety" oninput="window.updateObjectProperty('OffsetY', this.value)" type="number" style="width:100%; padding:4px; border:1px solid #ccc; border-radius:4px;">
+                                    <label style="font-size:11px; color:#555; display:block; margin-bottom:3px;">Dịch Y (inch)</label>
+                                    <input id="prop-offsety" oninput="window.updateObjectProperty('OffsetY', this.value)" type="number" step="0.1" style="width:100%; padding:4px; border:1px solid #ccc; border-radius:4px;">
                                 </div>
                             </div>
                         </div>
@@ -284,8 +284,9 @@ window.addObject = function() {
         StrokeColor: "#ff0000",
         StrokeSize: 1.5,
         OffsetX: 0,
-        OffsetY: 500,
-        Align: "center"
+        OffsetY: 0,
+        Align: "center",
+        BoxX: 0.5, BoxY: 0.5, BoxW: 9, BoxH: 1.0, Valign: 'top'
     };
     currentMaketObjects.push(newObj);
     currentActiveObjectId = newObj.Id;
@@ -374,8 +375,16 @@ window.updatePreview = function() {
         if (obj.TextCase === 'uppercase') text = text.toUpperCase();
         else if (obj.TextCase === 'lowercase') text = text.toLowerCase();
         
-        // Use pt for exact size match
-        let style = `position:absolute; top:0; left:0; width:100%; text-align:${obj.Align}; font-family:${obj.Font}; font-size:${obj.FontSize}pt; color:${obj.Color}; font-weight:bold; transform:translate(${obj.OffsetX}px, ${obj.OffsetY}px); padding: 0 40px; box-sizing: border-box; line-height: 1.2; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); pointer-events:auto; cursor:pointer;`;
+        // Use PPTX box coordinates mapped to 1920x1080 (1 inch = 192px)
+        let xPx = ((obj.BoxX || 0) + (obj.OffsetX || 0)) * 192;
+        let yPx = ((obj.BoxY || 0) + (obj.OffsetY || 0)) * 192;
+        let wPx = (obj.BoxW || 9) * 192;
+        let hPx = (obj.BoxH || 1) * 192;
+
+        let jc = obj.Align === 'center' ? 'center' : obj.Align === 'right' ? 'flex-end' : 'flex-start';
+        let ai = obj.Valign === 'middle' ? 'center' : obj.Valign === 'bottom' ? 'flex-end' : 'flex-start';
+
+        let style = `position:absolute; left:${xPx}px; top:${yPx}px; width:${wPx}px; height:${hPx}px; display:flex; justify-content:${jc}; align-items:${ai}; text-align:${obj.Align}; font-family:${obj.Font}; font-size:calc(1080px * (${obj.FontSize} / 405)); color:${obj.Color}; font-weight:bold; box-sizing: border-box; line-height: 1.2; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); pointer-events:auto; cursor:pointer;`;
         
         if (obj.Stroke) {
             style += `-webkit-text-stroke: ${obj.StrokeSize}px ${obj.StrokeColor};`;
@@ -445,7 +454,7 @@ window.saveMaketDetails = function() {
             } else if (updateRes && updateRes.status === 409) {
                 // Conflict handling
                 try {
-                    const serverShaRes = await fetch(\`https://api.github.com/repos/\${OWNER}/\${REPO_NAME}/contents/maket_details.json\`, {
+                    const serverShaRes = await fetch(`https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/maket_details.json`, {
                         headers: { 'Authorization': 'token ' + PAT }
                     });
                     if (serverShaRes.ok) {
