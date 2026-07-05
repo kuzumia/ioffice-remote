@@ -8,6 +8,19 @@ let currentActiveBgId = "";
 let currentActiveBgUrl = "";
 let availableBgs = [];
 
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>'"]/g, function(tag) {
+        return {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[tag] || tag;
+    });
+}
+
 window.openMaketModal = function(eventId, evtContent) {
     currentMaketEvt = { Id: eventId, Content: evtContent };
     currentMaketDateStr = ""; 
