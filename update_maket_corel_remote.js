@@ -30,6 +30,18 @@ window.openMaketModal = function(eventId, evtContent) {
     currentMaketObjects = [];
     if (c.MaketObjects && c.MaketObjects.length > 0) {
         currentMaketObjects = JSON.parse(JSON.stringify(c.MaketObjects)); // Deep copy
+        
+        // Patch legacy global objects that lack Box coordinates
+        currentMaketObjects.forEach((o, i) => {
+            if (o.BoxX === undefined) {
+                if (i === 0) { o.BoxX=0.5; o.BoxY=0.5; o.BoxW=9; o.BoxH=0.8; o.Valign='middle'; }
+                else if (i === 1) { o.BoxX=0.5; o.BoxY=1.3; o.BoxW=9; o.BoxH=1.2; o.Valign='middle'; }
+                else if (i === 2) { o.BoxX=0.5; o.BoxY=2.7; o.BoxW=9; o.BoxH=2.0; o.Valign='top'; }
+                else if (i === 3) { o.BoxX=3.5; o.BoxY=4.8; o.BoxW=5.5; o.BoxH=0.5; o.Valign='bottom'; }
+                else { o.BoxX=0.5; o.BoxY=0.5; o.BoxW=9; o.BoxH=1.0; o.Valign='top'; }
+                o.OffsetX = 0; o.OffsetY = 0; // Wipe old garbage pixel offsets
+            }
+        });
     }
 
     // Prepare Event Tokens
@@ -258,6 +270,21 @@ window.selectObject = function(id) {
     window.renderLayerList();
     window.renderPropertyPanel();
     window.updatePreview();
+}
+
+// Function to safely inject Box values for remote local storage
+function patchLegacyMaketObjects(objects) {
+    if (!objects || !Array.isArray(objects)) return;
+    objects.forEach((o, i) => {
+        if (o.BoxX === undefined) {
+            if (i === 0) { o.BoxX=0.5; o.BoxY=0.5; o.BoxW=9; o.BoxH=0.8; o.Valign='middle'; }
+            else if (i === 1) { o.BoxX=0.5; o.BoxY=1.3; o.BoxW=9; o.BoxH=1.2; o.Valign='middle'; }
+            else if (i === 2) { o.BoxX=0.5; o.BoxY=2.7; o.BoxW=9; o.BoxH=2.0; o.Valign='top'; }
+            else if (i === 3) { o.BoxX=3.5; o.BoxY=4.8; o.BoxW=5.5; o.BoxH=0.5; o.Valign='bottom'; }
+            else { o.BoxX=0.5; o.BoxY=0.5; o.BoxW=9; o.BoxH=1.0; o.Valign='top'; }
+            o.OffsetX = 0; o.OffsetY = 0; // Wipe old garbage pixel offsets
+        }
+    });
 }
 
 window.deleteObject = function(id, event) {
