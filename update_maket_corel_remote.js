@@ -130,8 +130,7 @@ window.openMaketModal = function(eventId, evtContent) {
                         <div id="edit-property-panel" style="padding:10px; border-bottom:2px solid #eee; background:#fdfdfd; opacity:0.5; pointer-events:none; overflow-y:auto; flex:1;">
                             <div style="font-weight:bold; font-size:12px; color:#dc3545; margin-bottom:10px;" id="prop-panel-title">Chưa chọn đối tượng</div>
                             
-                            <label style="font-size:11px; color:#555; display:block; margin-bottom:3px;">Tên Layer</label>
-                            <input id="prop-name" type="text" oninput="window.updateObjectProperty('Name', this.value)" style="width:100%; padding:4px; border:1px solid #ccc; border-radius:4px; margin-bottom:5px;">
+                            <input id="prop-name" type="hidden">
                             
                             <div style="display:flex; gap:5px; margin-bottom:5px;">
                                 <div style="flex:2;">
@@ -148,33 +147,39 @@ window.openMaketModal = function(eventId, evtContent) {
                                 </div>
                             </div>
 
-                            <div style="display:flex; gap:5px; margin-bottom:5px;">
-                                <div style="flex:1;">
-                                    <label style="font-size:11px; color:#555; display:block; margin-bottom:3px;">Căn lề</label>
-                                    <select id="prop-align" onchange="window.updateObjectProperty('Align', this.value)" style="width:100%; padding:4px; border:1px solid #ccc; border-radius:4px;">
-                                        <option value="left">Trái</option>
-                                        <option value="center">Giữa</option>
-                                        <option value="right">Phải</option>
-                                    </select>
+                            <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
+                                <!-- Align group -->
+                                <div style="display:flex; gap:2px; align-items:center; border:1px solid #ccc; border-radius:4px; padding:2px;">
+                                    <button title="Căn trái" id="btn-align-left" onclick="window.updateObjectProperty('Align', 'left')" style="background:none; border:none; padding:2px 4px; cursor:pointer; border-radius:3px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="15" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="15" y2="18"></line></svg></button>
+                                    <button title="Căn giữa" id="btn-align-center" onclick="window.updateObjectProperty('Align', 'center')" style="background:none; border:none; padding:2px 4px; cursor:pointer; border-radius:3px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="6" y1="18" x2="18" y2="18"></line></svg></button>
+                                    <button title="Căn phải" id="btn-align-right" onclick="window.updateObjectProperty('Align', 'right')" style="background:none; border:none; padding:2px 4px; cursor:pointer; border-radius:3px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="9" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="9" y1="18" x2="21" y2="18"></line></svg></button>
                                 </div>
-                                <div style="flex:1;">
-                                    <label style="font-size:11px; color:#555; display:block; margin-bottom:3px;">Kiểu chữ</label>
-                                    <select id="prop-case" onchange="window.updateObjectProperty('TextCase', this.value)" style="width:100%; padding:4px; border:1px solid #ccc; border-radius:4px;">
+                                
+                                <!-- Case dropdown -->
+                                <div style="position:relative; display:inline-block; border:1px solid #ccc; border-radius:4px; padding:2px 6px; cursor:pointer;" title="Kiểu chữ">
+                                    <div style="display:flex; align-items:center; gap:2px; pointer-events:none;">
+                                        <span style="font-family:serif; font-size:14px; font-weight:bold; line-height:1;">Aa</span>
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                    </div>
+                                    <select id="prop-case" onchange="window.updateObjectProperty('TextCase', this.value)" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;">
                                         <option value="none">Bình thường</option>
                                         <option value="uppercase">IN HOA</option>
                                         <option value="lowercase">in thường</option>
                                     </select>
                                 </div>
-                            </div>
-                            
-                            <div style="display:flex; gap:5px; margin-bottom:5px;">
-                                <div style="flex:1;">
-                                    <label style="font-size:11px; color:#555; display:block; margin-bottom:3px;">Màu chữ</label>
-                                    <input id="prop-color" oninput="window.updateObjectProperty('Color', this.value)" type="color" style="width:100%; height:28px; padding:0; border:1px solid #ccc; border-radius:4px;">
+                                
+                                <!-- Text Color -->
+                                <div style="position:relative; display:inline-block; cursor:pointer; border:1px solid #ccc; border-radius:4px; padding:2px 6px;" title="Màu chữ">
+                                    <div style="display:flex; flex-direction:column; align-items:center; pointer-events:none; gap:1px;">
+                                        <span style="font-family:serif; font-size:13px; font-weight:bold; line-height:1;">A</span>
+                                        <div id="prop-color-bar" style="width:14px; height:3px; background:#000; border-radius:1px;"></div>
+                                    </div>
+                                    <input id="prop-color" oninput="window.updateObjectProperty('Color', this.value); document.getElementById('prop-color-bar').style.background=this.value;" type="color" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;">
                                 </div>
-                                <div style="flex:1; display:flex; align-items:center; gap:5px; padding-top:15px;">
+
+                                <div style="display:flex; align-items:center; gap:5px; padding-left:5px; border-left:1px solid #eee;">
                                     <input id="prop-stroke" onchange="window.updateObjectProperty('Stroke', this.checked)" type="checkbox" style="cursor:pointer;">
-                                    <label style="font-size:12px; margin:0; cursor:pointer;" onclick="document.getElementById('prop-stroke').click()">Viền</label>
+                                    <label style="font-size:11px; margin:0; cursor:pointer;" onclick="document.getElementById('prop-stroke').click()">Viền</label>
                                 </div>
                             </div>
 
@@ -262,10 +267,16 @@ window.renderLayerList = function() {
     let listHtml = '';
     currentMaketObjects.forEach((obj) => {
         let isActive = obj.Id == currentActiveObjectId;
+        let shortText = (obj.Text || '').replace(/\n/g, ' ').trim();
+        if (shortText.length > 25) shortText = shortText.substring(0, 25) + '...';
+        
         listHtml += `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 10px; border-bottom:1px solid #eee; background:${isActive?'#e3f2fd':'#fff'}; cursor:pointer;" onclick="window.selectObject('${obj.Id}')">
-            <span style="font-weight:${isActive?'bold':'normal'}; color:${isActive?'#0d6efd':'#333'}; font-size:12px; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(obj.Name)}</span>
-            <button onclick="window.deleteObject('${obj.Id}', event)" style="background:none; border:none; color:#dc3545; cursor:pointer; font-size:14px; padding:0 2px;">🗑</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 10px; border-bottom:1px solid #eee; background:${isActive ? '#e3f2fd' : '#fff'}; cursor:pointer; transition:0.2s;" onclick="window.selectObject('${obj.Id}')" onmouseover="this.style.background='${isActive ? '#e3f2fd' : '#f8f9fa'}'" onmouseout="this.style.background='${isActive ? '#e3f2fd' : '#fff'}'">
+            <div style="flex:1; overflow:hidden; display:flex; flex-direction:column; justify-content:center;">
+                <span style="font-weight:${isActive ? 'bold' : 'normal'}; color:${isActive ? '#0d6efd' : '#333'}; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(obj.Name)}</span>
+                <span style="font-size:10px; color:#666; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:2px;" title="${escapeHtml(obj.Text || '')}">${escapeHtml(shortText)}</span>
+            </div>
+            <button onclick="window.deleteObject('${obj.Id}', event)" style="background:none; border:none; color:#dc3545; cursor:pointer; font-size:14px; padding:0 5px;" title="Xóa">🗑</button>
         </div>
         `;
     });
@@ -356,9 +367,13 @@ window.renderPropertyPanel = function() {
     document.getElementById('prop-name').value = obj.Name;
     document.getElementById('prop-font').value = obj.Font;
     document.getElementById('prop-size').value = obj.FontSize;
-    document.getElementById('prop-align').value = obj.Align;
     document.getElementById('prop-color').value = obj.Color;
+    document.getElementById('prop-color-bar').style.background = obj.Color;
     document.getElementById('prop-case').value = obj.TextCase;
+    
+    document.getElementById('btn-align-left').style.background = obj.Align === 'left' ? '#e0e0e0' : 'none';
+    document.getElementById('btn-align-center').style.background = obj.Align === 'center' ? '#e0e0e0' : 'none';
+    document.getElementById('btn-align-right').style.background = obj.Align === 'right' ? '#e0e0e0' : 'none';
     document.getElementById('prop-stroke').checked = obj.Stroke;
     document.getElementById('prop-strokecolor').value = obj.StrokeColor;
     document.getElementById('prop-strokesize').value = obj.StrokeSize;
