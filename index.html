@@ -179,6 +179,12 @@
             to { transform: rotate(360deg); }
         }
 
+        /* Khắc phục lỗi chữ trắng nền xám của tuỳ chọn thả xuống (select box) */
+        select option {
+            background: var(--surface);
+            color: var(--text);
+        }
+
         #setup-screen { display: none; }
         #remote-screen { display: none; }
     </style>
@@ -956,6 +962,7 @@
 
         async function syncToCloud(remoteCommand = "") {
             toggleMaketVisibility();
+            renderMaketList();
             if (!PAT || !OWNER || !currentDeviceId) return;
             
             const powerMode = document.querySelector('input[name="powerMode"]:checked')?.value || "Auto";
