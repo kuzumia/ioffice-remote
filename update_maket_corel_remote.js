@@ -48,9 +48,9 @@ window.openMaketModal = function(eventId, evtContent) {
         currentMaketObjects.forEach((o, i) => {
             if (o.OffsetY === undefined || o.OffsetY === 0) {
                 if (i === 0) { o.OffsetY = 65; }
-                else if (i === 1) { o.OffsetY = 183; }
-                else if (i === 2) { o.OffsetY = 486; }
-                else if (i === 3) { o.OffsetY = 928; }
+                else if (i === 1) { o.OffsetY = 200; }
+                else if (i === 2) { o.OffsetY = 380; }
+                else if (i === 3) { o.OffsetY = 550; }
             }
         });
     }
