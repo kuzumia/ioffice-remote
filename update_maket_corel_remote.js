@@ -179,42 +179,41 @@ window.openMaketModal = function(eventId, evtContent) {
 
                             </div>
 
-                            <div style="margin-bottom:5px;">
+                            <div style="margin-bottom:10px;">
                                 <label style="font-size:11px; color:#555; display:block; margin-bottom:3px;">Viền chữ</label>
                                 <div style="display:flex; align-items:center; gap:5px; border:1px solid #ccc; border-radius:4px; padding:4px; background:#fff;">
                                     <input id="prop-stroke" onchange="window.updateObjectProperty('Stroke', this.checked); document.getElementById('stroke-options').style.opacity = this.checked ? '1' : '0.4'; document.getElementById('stroke-options').style.pointerEvents = this.checked ? 'auto' : 'none';" type="checkbox" style="cursor:pointer; width:14px; height:14px; margin:0 2px;">
-                                    <div id="stroke-options" style="display:flex; align-items:center; gap:5px; flex:1;">
-                                        <div style="flex:1; display:flex; align-items:center; gap:2px;">
+                                    <div id="stroke-options" style="display:flex; align-items:center; gap:10px;">
+                                        <div style="display:flex; align-items:center; gap:2px;">
                                             <span style="font-size:10px; color:#555; white-space:nowrap;">Dày:</span>
-                                            <input id="prop-strokesize" oninput="window.updateObjectProperty('StrokeSize', this.value)" type="number" step="0.5" style="width:100%; padding:2px; border:1px solid #ccc; border-radius:4px; font-size:11px;" title="Dày viền">
+                                            <input id="prop-strokesize" oninput="window.updateObjectProperty('StrokeSize', this.value)" type="number" step="0.5" style="width:40px; padding:2px; border:1px solid #ccc; border-radius:4px; font-size:11px;" title="Dày viền">
                                         </div>
-                                        <div style="flex:1; display:flex; align-items:center; gap:2px;">
+                                        <div style="display:flex; align-items:center; gap:2px;">
                                             <span style="font-size:10px; color:#555; white-space:nowrap;">Màu:</span>
-                                            <input id="prop-strokecolor" oninput="window.updateObjectProperty('StrokeColor', this.value)" type="color" style="width:100%; height:20px; padding:0; border:1px solid #ccc; border-radius:4px;" title="Màu viền">
+                                            <input id="prop-strokecolor" oninput="window.updateObjectProperty('StrokeColor', this.value)" type="color" style="width:30px; height:18px; padding:0; border:1px solid #ccc; border-radius:4px;" title="Màu viền">
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div style="display:flex; gap:5px; align-items:flex-end;">
-                                <div style="flex:1;">
-                                    <label style="font-size:11px; color:#555; display:block; margin-bottom:3px;">Tọa độ X (pixels)</label>
-                                    <input id="prop-offsetx" oninput="window.updateObjectProperty('OffsetX', this.value)" type="number" style="width:100%; padding:4px; border:1px solid #ccc; border-radius:4px;">
-                                </div>
-                                <div style="flex:1;">
-                                    <label style="font-size:11px; color:#555; display:block; margin-bottom:3px;">Tọa độ Y (pixels)</label>
-                                    <input id="prop-offsety" oninput="window.updateObjectProperty('OffsetY', this.value)" type="number" style="width:100%; padding:4px; border:1px solid #ccc; border-radius:4px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; background:#f9f9f9; padding:4px; border:1px solid #ccc; border-radius:4px; margin-bottom:5px;">
+                                <div style="display:flex; align-items:center; gap:2px;">
+                                    <span style="font-size:10px; color:#555; font-weight:bold;">Tọa độ</span>
+                                    <span style="font-size:10px; color:#555; margin-left:2px;">X:</span>
+                                    <input id="prop-offsetx" oninput="window.updateObjectProperty('OffsetX', this.value)" type="number" style="width:40px; padding:2px; border:1px solid #ccc; border-radius:4px; font-size:11px;">
+                                    <span style="font-size:10px; color:#555; margin-left:2px;">Y:</span>
+                                    <input id="prop-offsety" oninput="window.updateObjectProperty('OffsetY', this.value)" type="number" style="width:40px; padding:2px; border:1px solid #ccc; border-radius:4px; font-size:11px;">
                                 </div>
                                 
-                                <div style="display:grid; grid-template-columns: 20px 20px 20px; grid-template-rows: 20px 20px 20px; gap:2px; padding:2px; background:#f0f0f0; border-radius:4px; border:1px solid #ccc; flex-shrink:0;">
+                                <div style="display:grid; grid-template-columns: 15px 15px 15px; grid-template-rows: 15px 15px 15px; gap:2px; padding:2px; background:#fff; border-radius:4px; border:1px solid #ddd; flex-shrink:0;">
                                     <div></div>
-                                    <button title="Lên 10px" onclick="window.nudgePosition(0, -10)" style="cursor:pointer; background:#fff; border:1px solid #bbb; border-radius:3px; padding:0; display:flex; align-items:center; justify-content:center; color:#333; font-size:10px;">▲</button>
+                                    <button title="Lên 10px" onclick="window.nudgePosition(0, -10)" style="cursor:pointer; background:#f8f9fa; border:1px solid #bbb; border-radius:2px; padding:0; display:flex; align-items:center; justify-content:center; color:#333; font-size:7px;">▲</button>
                                     <div></div>
-                                    <button title="Trái 10px" onclick="window.nudgePosition(-10, 0)" style="cursor:pointer; background:#fff; border:1px solid #bbb; border-radius:3px; padding:0; display:flex; align-items:center; justify-content:center; color:#333; font-size:10px;">◀</button>
-                                    <button title="Giữa (0,0)" onclick="window.updateObjectProperty('OffsetX', 0); window.updateObjectProperty('OffsetY', 0); document.getElementById('prop-offsetx').value=0; document.getElementById('prop-offsety').value=0;" style="cursor:pointer; background:#e0e0e0; border:1px solid #bbb; border-radius:3px; padding:0; display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:bold; color:#333;">O</button>
-                                    <button title="Phải 10px" onclick="window.nudgePosition(10, 0)" style="cursor:pointer; background:#fff; border:1px solid #bbb; border-radius:3px; padding:0; display:flex; align-items:center; justify-content:center; color:#333; font-size:10px;">▶</button>
+                                    <button title="Trái 10px" onclick="window.nudgePosition(-10, 0)" style="cursor:pointer; background:#f8f9fa; border:1px solid #bbb; border-radius:2px; padding:0; display:flex; align-items:center; justify-content:center; color:#333; font-size:7px;">◀</button>
+                                    <button title="Giữa (0,0)" onclick="window.updateObjectProperty('OffsetX', 0); window.updateObjectProperty('OffsetY', 0); document.getElementById('prop-offsetx').value=0; document.getElementById('prop-offsety').value=0;" style="cursor:pointer; background:#e0e0e0; border:1px solid #bbb; border-radius:2px; padding:0; display:flex; align-items:center; justify-content:center; font-size:7px; font-weight:bold; color:#333;">O</button>
+                                    <button title="Phải 10px" onclick="window.nudgePosition(10, 0)" style="cursor:pointer; background:#f8f9fa; border:1px solid #bbb; border-radius:2px; padding:0; display:flex; align-items:center; justify-content:center; color:#333; font-size:7px;">▶</button>
                                     <div></div>
-                                    <button title="Xuống 10px" onclick="window.nudgePosition(0, 10)" style="cursor:pointer; background:#fff; border:1px solid #bbb; border-radius:3px; padding:0; display:flex; align-items:center; justify-content:center; color:#333; font-size:10px;">▼</button>
+                                    <button title="Xuống 10px" onclick="window.nudgePosition(0, 10)" style="cursor:pointer; background:#f8f9fa; border:1px solid #bbb; border-radius:2px; padding:0; display:flex; align-items:center; justify-content:center; color:#333; font-size:7px;">▼</button>
                                     <div></div>
                                 </div>
                             </div>
