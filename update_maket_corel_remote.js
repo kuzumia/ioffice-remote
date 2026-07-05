@@ -391,63 +391,97 @@ window.updateObjectProperty = function(key, value) {
 }
 
 window.updatePreview = function() {
-    const container = document.getElementById('preview-container');
-    const board = document.getElementById('preview-board');
-    if (!container || !board) return;
-    
-    const scale = container.clientWidth / 1920;
-    board.style.transform = `scale(${scale})`;
-    
-    if (currentActiveBgUrl && currentActiveBgUrl.trim() !== '') {
-        board.style.background = `url('${currentActiveBgUrl}') center/cover no-repeat`;
-    } else {
-        board.style.background = 'radial-gradient(circle at center, #1b3a6e 0%, #0b1a2e 100%)';
-    }
-    
-    let html = '';
-    
-    currentMaketObjects.forEach(obj => {
-        let text = String(obj.Text || "");
-        text = text.replace(/{{EventContent}}/g, currentMaketEvtContent);
-        text = text.replace(/{{EventTime}}/g, currentMaketFormattedDate);
-        text = text.replace(/\\n/g, "<br>").replace(/\n/g, "<br>");
+    try {
+        const container = document.getElementById('preview-container');
+        const board = document.getElementById('preview-board');
+        if (!container || !board) return;
         
-        if (obj.TextCase === 'uppercase') text = text.toUpperCase();
-        else if (obj.TextCase === 'lowercase') text = text.toLowerCase();
+        const scale = container.clientWidth / 1920;
+        board.style.transform = `scale(${scale})`;
         
-        // Use PPTX box coordinates mapped to 1920x1080 (1 inch = 192px)
-        let bx = Number(obj.BoxX) || 0;
-        let ox = Number(obj.OffsetX) || 0;
-        let xPx = (bx + ox) * 192;
-
-        let by = Number(obj.BoxY) || 0;
-        let oy = Number(obj.OffsetY) || 0;
-        let yPx = (by + oy) * 192;
-
-        let bw = Number(obj.BoxW) || 9;
-        let bh = Number(obj.BoxH) || 1;
-        let wPx = bw * 192;
-        let hPx = bh * 192;
-
-        let jc = obj.Align === 'center' ? 'center' : obj.Align === 'right' ? 'flex-end' : 'flex-start';
-        let ai = obj.Valign === 'middle' ? 'center' : obj.Valign === 'bottom' ? 'flex-end' : 'flex-start';
-
-        let safeFont = obj.Font ? obj.Font.replace(/"/g, "'") : 'Arial';
-        let style = `position:absolute; left:${xPx}px; top:${yPx}px; width:${wPx}px; height:${hPx}px; display:flex; justify-content:${jc}; align-items:${ai}; text-align:${obj.Align}; font-family:${safeFont}; font-size:calc(1080px * (${obj.FontSize} / 405)); color:${obj.Color}; font-weight:bold; box-sizing: border-box; line-height: 1.2; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); pointer-events:auto; cursor:pointer;`;
-        
-        if (obj.Stroke) {
-            style += `-webkit-text-stroke: ${obj.StrokeSize}px ${obj.StrokeColor};`;
+        if (currentActiveBgUrl && currentActiveBgUrl.trim() !== '') {
+            board.style.background = `url('${currentActiveBgUrl}') center/cover no-repeat`;
+        } else {
+            board.style.background = 'radial-gradient(circle at center, #1b3a6e 0%, #0b1a2e 100%)';
         }
         
-        let outline = obj.Id == currentActiveObjectId ? 'outline: 3px dashed #dc3545; outline-offset: 5px; z-index:100;' : 'z-index:10;';
+        board.innerHTML = '';
         
-        let safeStyle = style.replace(/"/g, "'");
-        let safeOutline = outline.replace(/"/g, "'");
+        currentMaketObjects.forEach(obj => {
+            let text = String(obj.Text || "");
+            text = text.replace(/{{EventContent}}/g, currentMaketEvtContent);
+            text = text.replace(/{{EventTime}}/g, currentMaketFormattedDate);
+            
+            if (obj.TextCase === 'uppercase') text = text.toUpperCase();
+            else if (obj.TextCase === 'lowercase') text = text.toLowerCase();
+            
+            // Use PPTX box coordinates mapped to 1920x1080 (1 inch = 192px)
+            let bxStr = String(obj.BoxX !== undefined && obj.BoxX !== null ? obj.BoxX : 0).replace(',', '.');
+            let oxStr = String(obj.OffsetX !== undefined && obj.OffsetX !== null ? obj.OffsetX : 0).replace(',', '.');
+            let byStr = String(obj.BoxY !== undefined && obj.BoxY !== null ? obj.BoxY : 0).replace(',', '.');
+            let oyStr = String(obj.OffsetY !== undefined && obj.OffsetY !== null ? obj.OffsetY : 0).replace(',', '.');
+            let bwStr = String(obj.BoxW !== undefined && obj.BoxW !== null ? obj.BoxW : 9).replace(',', '.');
+            let bhStr = String(obj.BoxH !== undefined && obj.BoxH !== null ? obj.BoxH : 1).replace(',', '.');
 
-        html += `<div style="${safeStyle} ${safeOutline}" onclick="window.selectObject('${obj.Id}')">${text}</div>`;
-    });
-    
-    board.innerHTML = html;
+            let bx = Number(bxStr) || 0;
+            let ox = Number(oxStr) || 0;
+            let xPx = (bx + ox) * 192;
+
+            let by = Number(byStr) || 0;
+            let oy = Number(oyStr) || 0;
+            let yPx = (by + oy) * 192;
+
+            let bw = Number(bwStr) || 9;
+            let bh = Number(bhStr) || 1;
+            let wPx = bw * 192;
+            let hPx = bh * 192;
+
+            let div = document.createElement('div');
+            div.style.position = 'absolute';
+            div.style.left = xPx + 'px';
+            div.style.top = yPx + 'px';
+            div.style.width = wPx + 'px';
+            div.style.height = hPx + 'px';
+            div.style.display = 'flex';
+            div.style.justifyContent = obj.Align === 'center' ? 'center' : obj.Align === 'right' ? 'flex-end' : 'flex-start';
+            div.style.alignItems = obj.Valign === 'middle' ? 'center' : obj.Valign === 'bottom' ? 'flex-end' : 'flex-start';
+            div.style.textAlign = obj.Align;
+            div.style.fontFamily = obj.Font || 'Arial';
+            
+            let fsize = Number(String(obj.FontSize !== undefined && obj.FontSize !== null ? obj.FontSize : 32).replace(',', '.')) || 32;
+            div.style.fontSize = (1080 * fsize / 405) + 'px';
+            div.style.color = obj.Color || '#FFFFFF';
+            div.style.fontWeight = 'bold';
+            div.style.boxSizing = 'border-box';
+            div.style.lineHeight = '1.2';
+            div.style.textShadow = '2px 2px 4px rgba(0,0,0,0.5)';
+            div.style.pointerEvents = 'auto';
+            div.style.cursor = 'pointer';
+            div.style.zIndex = '10';
+
+            if (obj.Stroke) {
+                let sSize = Number(String(obj.StrokeSize !== undefined && obj.StrokeSize !== null ? obj.StrokeSize : 1.5).replace(',', '.')) || 1.5;
+                div.style.webkitTextStroke = `${sSize}px ${obj.StrokeColor || '#ff0000'}`;
+            }
+
+            if (obj.Id == currentActiveObjectId) {
+                div.style.outline = '3px dashed #dc3545';
+                div.style.outlineOffset = '5px';
+                div.style.zIndex = '100';
+            }
+
+            div.onclick = function(e) { 
+                e.stopPropagation();
+                window.selectObject(obj.Id); 
+            };
+            
+            div.innerHTML = text.replace(/\\n/g, "<br>").replace(/\n/g, "<br>");
+            board.appendChild(div);
+        });
+    } catch (err) {
+        console.error(err);
+        alert("Lỗi updatePreview: " + err.message);
+    }
 };
 
 window.getFormData = function() {
