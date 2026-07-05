@@ -307,268 +307,14 @@
     <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-bottom: 30px;">Version 1.0.1 (Build 2026.07)</div>
 
     <!-- Modal Edit Maket -->
-    <div id="maket-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; padding:20px; overflow-y:auto;">
-        <div class="card" style="max-width: 500px; margin: 0 auto;">
-            <h3 style="margin-top:0; margin-bottom: 20px;">Sửa Maket</h3>
-            <input type="hidden" id="edit-maket-id">
-            
-            <div class="form-group">
-                <label>Dòng trên (Đơn vị chủ quản)</label>
-                <input type="text" id="edit-maket-top" style="width:100%; padding:8px; border-radius:4px;">
-            </div>
-            <div class="form-group">
-                <label>Dòng chính (Tiêu đề)</label>
-                <textarea id="edit-maket-main" rows="2" style="width:100%; padding:8px; border-radius:4px;"></textarea>
-            </div>
-            <div class="form-group" style="display:flex; gap:10px;">
-                <div style="flex:1;">
-                    <label>Màu chữ chính</label>
-                    <input type="color" id="edit-maket-color" style="width:100%; height:40px;">
-                </div>
-                <div style="flex:1;">
-                    <label>Cỡ chữ chính</label>
-                    <input type="number" step="0.5" id="edit-maket-size" style="width:100%; padding:8px; border-radius:4px;">
-                </div>
-            </div>
-            
-            <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 15px 0;">
-            
-            <div class="form-group">
-                <label>Nội dung (Phần giữa)</label>
-                <textarea id="edit-maket-content" rows="3" style="width:100%; padding:8px; border-radius:4px;"></textarea>
-            </div>
-            <div class="form-group" style="display:flex; gap:10px;">
-                <div style="flex:1;">
-                    <label>Màu chữ ND</label>
-                    <input type="color" id="edit-maket-content-color" style="width:100%; height:40px;">
-                </div>
-                <div style="flex:1;">
-                    <label>Cỡ chữ ND</label>
-                    <input type="number" step="0.1" id="edit-maket-content-size" style="width:100%; padding:8px; border-radius:4px;">
-                </div>
-            </div>
-            
-            <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 15px 0;">
-            
-            <div class="form-group">
-                <label>Dòng dưới (Thời gian/Địa điểm)</label>
-                <input type="text" id="edit-maket-bottom" style="width:100%; padding:8px; border-radius:4px;">
-            </div>
-            <div class="form-group" style="display:flex; gap:10px;">
-                <div style="flex:1;">
-                    <label>Màu chữ dưới</label>
-                    <input type="color" id="edit-maket-bottom-color" style="width:100%; height:40px;">
-                </div>
-                <div style="flex:1;">
-                    <label>Cỡ chữ dưới</label>
-                    <input type="number" step="0.1" id="edit-maket-bottom-size" style="width:100%; padding:8px; border-radius:4px;">
-                </div>
-            </div>
-            
-            <div style="display:flex; gap:10px; margin-top:20px;">
-                <button onclick="saveMaketDetails()" style="flex:1;">💾 Lưu Maket</button>
-                <button onclick="closeMaketModal()" style="flex:1; background:#555;">Đóng</button>
-            </div>
-        </div>
-    </div>
+        <!-- Maket Logic is now loaded externally -->
+<script src="update_maket_corel_remote.js"></script>
+        let globalRooms = [];
+        let globalBackgrounds = [];
+        let globalSchedules = [];
+        let globalMaketDetails = {};
+        let currentMaketDetailsSha = "";
 
-    <script>
-        const REPO_NAME = "iOffice-Presenter-DAStorage";
-        let PAT = localStorage.getItem('iOfficePat') || "";
-        let OWNER = localStorage.getItem('iOfficeOwner') || "phamlbnb";
-        let currentSha = "";
-        
-        let currentDeviceId = localStorage.getItem('iOfficeLastDevice') || "";
-        let currentDeviceName = localStorage.getItem('iOfficeLastDeviceName') || "";
-
-        // UI Routing
-        if (PAT) {
-            if (!OWNER) {
-                // Determine owner from PAT
-                document.getElementById('device-list-screen').style.display = 'block';
-                determineOwnerAndFetch();
-            } else {
-                if (currentDeviceId) {
-                    openDevice(currentDeviceId, currentDeviceName, true);
-                } else {
-                    document.getElementById('device-list-screen').style.display = 'block';
-                    fetchDeviceList();
-                }
-            }
-        } else {
-            document.getElementById('setup-screen').style.display = 'block';
-        }
-
-        function setStatus(msg, isError = false) {
-            const st = document.getElementById('statusText');
-            st.innerText = msg;
-            st.style.color = isError ? "var(--danger)" : "var(--text-muted)";
-        }
-
-        function savePat() {
-            const input = document.getElementById('patInput').value.trim();
-            if (!input) return;
-            PAT = input;
-            localStorage.setItem('iOfficePat', PAT);
-            document.getElementById('setup-screen').style.display = 'none';
-            document.getElementById('device-list-screen').style.display = 'block';
-            determineOwnerAndFetch();
-        }
-
-        function logout() {
-            localStorage.removeItem('iOfficePat');
-            localStorage.removeItem('iOfficeOwner');
-            localStorage.removeItem('iOfficeLastDevice');
-            localStorage.removeItem('iOfficeLastDeviceName');
-            location.reload();
-        }
-
-        async function determineOwnerAndFetch() {
-            setStatus("Đang xác thực...");
-            try {
-                const res = await fetch("https://api.github.com/user", {
-                    headers: { 
-                        "Authorization": `Bearer ${PAT}`,
-                        "X-GitHub-Api-Version": "2022-11-28"
-                    }
-                });
-                if (!res.ok) throw new Error("PAT không hợp lệ");
-                const data = await res.json();
-                OWNER = data.login;
-                localStorage.setItem('iOfficeOwner', OWNER);
-                fetchDeviceList();
-            } catch (err) {
-                setStatus(err.message, true);
-                logout();
-            }
-        }
-
-        async function fetchDeviceList() {
-            if (!PAT || !OWNER) return;
-            document.getElementById('syncLoaderList').style.display = 'inline-block';
-            setStatus("Đang tải danh sách thiết bị...");
-            document.getElementById('refreshDeviceListBtn').disabled = true;
-
-            try {
-                const url = `https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents`;
-                const res = await fetch(url, {
-                    headers: { 
-                        "Authorization": `Bearer ${PAT}`,
-                        "X-GitHub-Api-Version": "2022-11-28"
-                    }
-                });
-
-                const deviceListEl = document.getElementById('device-list');
-                deviceListEl.innerHTML = '';
-
-                if (!res.ok) throw new Error("Lỗi tải danh sách thiết bị.");
-
-                const files = await res.json();
-                const statusFiles = files.filter(f => f.name.startsWith('status_') && f.name.endsWith('.json'));
-
-                if (statusFiles.length === 0) {
-                    deviceListEl.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">Chưa có thiết bị nào trực tuyến.</div>';
-                    setStatus("Hoàn thành.");
-                    return;
-                }
-
-                // Tải file thành từng cụm (batch) để tránh bị GitHub khoá do Rate Limit
-                let devices = [];
-                const chunkSize = 5;
-                for (let i = 0; i < statusFiles.length; i += chunkSize) {
-                    const chunk = statusFiles.slice(i, i + chunkSize);
-                    const chunkPromises = chunk.map(async file => {
-                        try {
-                            const fileRes = await fetch(file.url, {
-                                headers: { 
-                                    "Authorization": `Bearer ${PAT}`,
-                                    "X-GitHub-Api-Version": "2022-11-28"
-                                }
-                            });
-                            if (fileRes.ok) {
-                                const fileData = await fileRes.json();
-                                return JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
-                            }
-                        } catch (e) { console.error("Error parsing status:", e); }
-                        return null;
-                    });
-                    const chunkResults = await Promise.all(chunkPromises);
-                    devices.push(...chunkResults.filter(d => d != null));
-                }
-
-                if (devices.length === 0) {
-                    deviceListEl.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">Không thể đọc trạng thái thiết bị.</div>';
-                    setStatus("Hoàn thành.");
-                    return;
-                }
-
-                devices.sort((a,b) => new Date(b.LastActive) - new Date(a.LastActive));
-
-                for (const d of devices) {
-                    const lastActive = new Date(d.LastActive);
-                    const now = new Date();
-                    const diffMinutes = Math.abs(now - lastActive) / 1000 / 60;
-                    const isOnline = diffMinutes <= 2;
-                    
-                    const statusColor = isOnline ? 'var(--success)' : 'var(--danger)';
-                    const statusText = isOnline ? (d.IsPresentationRunning ? 'Đang trình chiếu' : 'Trực tuyến (Nghỉ)') : 'Ngoại tuyến';
-                    
-                    const nameText = escapeHtml(d.DeviceName) || escapeHtml(d.MachineName) || "Thiết bị vô danh";
-                    const roomText = escapeHtml(d.TargetRoomName) || "Chưa chọn phòng";
-                    const localIp = escapeHtml(d.LocalIP);
-                    
-                    const div = document.createElement('div');
-                    div.style.cssText = 'background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid ' + statusColor + '; cursor: pointer; transition: background 0.2s;';
-                    div.onclick = () => openDevice(d.DeviceUUID, nameText);
-                    
-                    div.innerHTML = `
-                        <div>
-                            <div style="font-weight: bold; font-size: 15px;">${nameText}</div>
-                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Phòng: ${roomText} | IP: ${localIp}</div>
-                        </div>
-                        <div style="text-align: right; font-size: 12px;">
-                            <div style="color: ${statusColor}; font-weight: bold;">${statusText}</div>
-                            <div style="color: var(--text-muted); margin-top: 4px;">${lastActive.toLocaleTimeString()}</div>
-                        </div>
-                    `;
-                    deviceListEl.appendChild(div);
-                }
-
-                setStatus(`Đã tải danh sách: ${new Date().toLocaleTimeString()}`);
-            } catch (err) {
-                setStatus("Lỗi mạng: " + err.message, true);
-            } finally {
-                document.getElementById('syncLoaderList').style.display = 'none';
-                document.getElementById('refreshDeviceListBtn').disabled = false;
-            }
-        }
-
-        function openDevice(id, name, noFetch = false) {
-            currentDeviceId = id;
-            currentDeviceName = name;
-            localStorage.setItem('iOfficeLastDevice', id);
-            localStorage.setItem('iOfficeLastDeviceName', name);
-            
-            document.getElementById('device-list-screen').style.display = 'none';
-            document.getElementById('device-control-screen').style.display = 'block';
-            document.getElementById('currentDeviceNameDisplay').innerText = name;
-            
-            if (!noFetch) fetchDeviceSettings();
-        }
-
-        function backToDeviceList() {
-            currentDeviceId = "";
-            currentDeviceName = "";
-            localStorage.removeItem('iOfficeLastDevice');
-            localStorage.removeItem('iOfficeLastDeviceName');
-            
-            document.getElementById('device-control-screen').style.display = 'none';
-            document.getElementById('device-list-screen').style.display = 'block';
-            if (window.statusInterval) clearInterval(window.statusInterval);
-            fetchDeviceList();
-        }
-        
-        // --- BẢO MẬT: WebCrypto API (AES-CBC) Tương thích với C# ---
         async function getAesKey(pat) {
             const enc = new TextEncoder();
             const keyMaterial = await window.crypto.subtle.digest("SHA-256", enc.encode(pat));
@@ -594,7 +340,7 @@
                 
                 return new TextDecoder().decode(decryptedBuffer);
             } catch (e) {
-                return cipherText; // Fallback
+                return cipherText;
             }
         }
         
@@ -621,132 +367,59 @@
                 return plainText;
             }
         }
-        // -----------------------------------------------------------
-        
-        let globalRooms = [];
-        let globalBackgrounds = [];
-        let globalSchedules = [];
-        let globalMaketDetails = {};
-        let currentMaketDetailsSha = "";
 
         async function forceRefreshStatus() {
-            if (!PAT || !OWNER || !currentDeviceId) return;
-            document.getElementById('syncLoader').style.display = 'inline-block';
-            setStatus("Đang yêu cầu Tivi báo cáo trạng thái...");
-            document.getElementById('refreshBtn').disabled = true;
-            await syncToCloud("FORCE_STATUS_UPDATE");
-            setTimeout(() => {
-                fetchDeviceDataFull();
-            }, 3000);
-        }
-
-        const fileETags = {};
-        async function etagFetch(url, options = {}) {
-            if (!options.headers) options.headers = {};
-            if (fileETags[url]) {
-                options.headers["If-None-Match"] = fileETags[url];
-            }
-            const res = await fetch(url, options);
-            if (res.status === 304) {
-                return { ok: true, notModified: true, status: 304 };
-            }
-            if (res.ok) {
-                const etag = res.headers.get("ETag");
-                if (etag) fileETags[url] = etag;
-            }
-            return res;
+            fetchDeviceDataFull();
         }
 
         async function fetchDeviceDataFull() {
             if (!PAT || !OWNER || !currentDeviceId) return;
-            // Only show loader if we don't have ETags yet (first load)
-            if (Object.keys(fileETags).length === 0) {
-                document.getElementById('syncLoader').style.display = 'inline-block';
-                setStatus("Đang đồng bộ cấu hình máy...");
-                document.getElementById('refreshBtn').disabled = true;
-            }
+            document.getElementById('syncLoader').style.display = 'inline-block';
+            setStatus("Đang đồng bộ cấu hình máy...");
+            document.getElementById('refreshBtn').disabled = true;
 
             try {
                 // 1. Fetch status
-                const resStatus = await etagFetch(`https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/status_${currentDeviceId}.json`, {
-                    headers: { "Authorization": `Bearer ${PAT}`, "X-GitHub-Api-Version": "2022-11-28" }
+                const resStatus = await fetch(https://api.github.com/repos/ + OWNER + / + REPO_NAME + /contents/status_ + currentDeviceId + .json, {
+                    headers: { "Authorization": Bearer  + PAT, "X-GitHub-Api-Version": "2022-11-28" }
                 });
                 if (resStatus.ok) {
-                    let isRunning = window.lastKnownIsRunning;
-                    
-                    if (!resStatus.notModified) {
-                        const dataSt = await resStatus.json();
-                        const st = JSON.parse(decodeURIComponent(escape(atob(dataSt.content))));
-                        isRunning = st.IsPresentationRunning;
-                        window.lastKnownIsRunning = isRunning;
-                        window.commandPending = false; // PC đã phản hồi, xóa trạng thái chờ
-                        
-                        document.getElementById('status-maket').innerText = st.CurrentActiveMaketName || (isRunning ? "Lịch công tác" : "--");
-                    }
-                    
-                    if (isRunning !== undefined) {
-                        const statusEl = document.getElementById('status-running');
-                        statusEl.innerText = isRunning ? "🟢 BẬT" : "🔴 TẮT";
-                        statusEl.style.color = isRunning ? "var(--success)" : "var(--danger)";
-                        
-                        const toggleBtn = document.getElementById('togglePresentationBtn');
-                        if (toggleBtn && !window.commandPending) {
-                            if (isRunning) {
-                                toggleBtn.innerText = "⏹ Dừng Trình chiếu";
-                                toggleBtn.style.background = "var(--danger)";
-                                toggleBtn.onclick = () => togglePresentation(false);
-                            } else {
-                                toggleBtn.innerText = "▶ Bắt đầu Trình chiếu";
-                                toggleBtn.style.background = "var(--success)";
-                                toggleBtn.onclick = () => togglePresentation(true);
-                            }
-                        }
-                    }
+                    const dataSt = await resStatus.json();
+                    const st = JSON.parse(decodeURIComponent(escape(atob(dataSt.content))));
+                    const isRunning = st.IsPresentationRunning;
+                    const statusEl = document.getElementById('status-running');
+                    statusEl.innerText = isRunning ? "🟢 BẬT" : "🔴 TẮT";
+                    statusEl.style.color = isRunning ? "var(--success)" : "var(--danger)";
+                    document.getElementById('status-maket').innerText = st.CurrentActiveMaketName || (isRunning ? "Lịch công tác" : "--");
                 }
 
-                // 2. Fetch maket_rooms
-                const resRooms = await etagFetch(`https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/devices/${currentDeviceId}/maket_rooms.json`, {
-                    headers: { "Authorization": `Bearer ${PAT}`, "X-GitHub-Api-Version": "2022-11-28" }
-                });
-                if (resRooms.ok && !resRooms.notModified) {
-                    const dataRm = await resRooms.json();
-                    const encryptedRm = decodeURIComponent(escape(atob(dataRm.content)));
-                    const decRm = await decryptAES(encryptedRm, PAT);
-                    if (decRm.startsWith("[")) {
-                        globalRooms = JSON.parse(decRm);
-                    } else if (decRm.startsWith("{")) {
-                        const wrapper = JSON.parse(decRm);
-                        globalRooms = wrapper.Rooms || [];
-                        globalBackgrounds = wrapper.Backgrounds || [];
-                    }
-                }
-
-                // 3. Fetch global_settings.json for PowerMode, TargetRoom, TargetBackgroundId
-                const resSettings = await etagFetch(`https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/devices/${currentDeviceId}/global_settings.json`, {
-                    headers: { "Authorization": `Bearer ${PAT}`, "X-GitHub-Api-Version": "2022-11-28" }
+                // 2. Fetch global_settings
+                const resSettings = await fetch(https://api.github.com/repos/ + OWNER + / + REPO_NAME + /contents/devices/ + currentDeviceId + /global_settings.json, {
+                    headers: { "Authorization": Bearer  + PAT, "X-GitHub-Api-Version": "2022-11-28" }
                 });
                 
-                if (resSettings.ok && !resSettings.notModified) {
+                if (resSettings.ok) {
                     const dataSet = await resSettings.json();
-                    currentSha = dataSet.sha;
                     const settings = JSON.parse(decodeURIComponent(escape(atob(dataSet.content))));
+                    window.globalSettings = settings;
                     
                     if (settings.PowerMode) {
-                        const el = document.querySelector(`input[name="powerMode"][value="${settings.PowerMode}"]`);
+                        const el = document.querySelector(input[name="powerMode"][value=" + settings.PowerMode + "]);
                         if(el) el.checked = true;
                     }
-                    
                     if (settings.PresentationMode) {
-                        const el = document.querySelector(`input[name="presMode"][value="${settings.PresentationMode}"]`);
+                        const el = document.querySelector(input[name="presMode"][value=" + settings.PresentationMode + "]);
                         if(el) el.checked = true;
                     }
-                    toggleMaketVisibility();
-                    
+
+                    globalRooms = settings.RoomConfigs || [];
+                    globalBackgrounds = settings.Backgrounds || [];
+
                     // Render Room List
                     const selRoom = document.getElementById('sel-target-room');
                     let roomHtml = '<option value="">-- Chọn phòng (Tất cả) --</option>';
                     globalRooms.forEach(r => {
-                        roomHtml += `<option value="${r.Id}">${escapeHtml(r.Name)}</option>`;
+                        roomHtml += <option value=" + r.Id + "> + escapeHtml(r.Name) + </option>;
                     });
                     selRoom.innerHTML = roomHtml;
                     if (settings.TargetRoom) selRoom.value = settings.TargetRoom;
@@ -755,55 +428,52 @@
                     const selBg = document.getElementById('sel-target-bg');
                     let bgHtml = '<option value="">-- Mặc định hệ thống --</option>';
                     globalBackgrounds.forEach(b => {
-                        bgHtml += `<option value="${b.Id}">${escapeHtml(b.FileName.split('/').pop())}</option>`;
+                        bgHtml += <option value=" + b.Id + "> + escapeHtml(b.FileName.split('/').pop()) + </option>;
                     });
                     selBg.innerHTML = bgHtml;
                     if (settings.TargetBackgroundId) selBg.value = settings.TargetBackgroundId;
                 }
                 
-                // 4. Load Maket Data (schedule_data and maket_details)
                 await loadMaketData();
-                
-                setStatus(`Đã cập nhật lúc: ${new Date().toLocaleTimeString()}`);
+                setStatus(Đã cập nhật lúc:  + new Date().toLocaleTimeString());
             } catch (err) {
-                setStatus("Lỗi mạng: " + err.message, true);
+                setStatus("Lỗi đồng bộ cấu hình", true);
             } finally {
                 document.getElementById('syncLoader').style.display = 'none';
                 document.getElementById('refreshBtn').disabled = false;
             }
         }
-        
+
         async function loadMaketData() {
             try {
-                const [resSched, resDet] = await Promise.all([
-                    etagFetch(`https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/devices/${currentDeviceId}/schedule_data.json`, { headers: { "Authorization": `Bearer ${PAT}`, "X-GitHub-Api-Version": "2022-11-28" } }).catch(()=>null),
-                    etagFetch(`https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/devices/${currentDeviceId}/maket_details.json`, { headers: { "Authorization": `Bearer ${PAT}`, "X-GitHub-Api-Version": "2022-11-28" } }).catch(()=>null)
-                ]);
+                const resDet = await fetch(https://api.github.com/repos/ + OWNER + / + REPO_NAME + /contents/devices/ + currentDeviceId + /maket_details.json, { headers: { "Authorization": Bearer  + PAT, "X-GitHub-Api-Version": "2022-11-28" } }).catch(()=>null);
+                const resSched = await fetch(https://api.github.com/repos/ + OWNER + / + REPO_NAME + /contents/devices/ + currentDeviceId + /schedule_data.json, { headers: { "Authorization": Bearer  + PAT, "X-GitHub-Api-Version": "2022-11-28" } }).catch(()=>null);
                 
-                let changed = false;
-                if (resDet && resDet.ok && !resDet.notModified) {
+                if (resDet && resDet.ok) {
                     const d = await resDet.json();
                     currentMaketDetailsSha = d.sha;
                     const enc = decodeURIComponent(escape(atob(d.content)));
                     const dec = await decryptAES(enc, PAT);
-                    if (dec.startsWith("{")) globalMaketDetails = JSON.parse(dec);
-                    changed = true;
+                    if (dec.startsWith("{")) {
+                        globalMaketDetails = JSON.parse(dec);
+                        window.globalMaketDetails = globalMaketDetails; // Cho update_maket_corel_remote.js
+                    }
                 }
                 
-                if (resSched && resSched.ok && !resSched.notModified) {
+                if (resSched && resSched.ok) {
                     const d = await resSched.json();
                     const enc = decodeURIComponent(escape(atob(d.content)));
                     const dec = await decryptAES(enc, PAT);
                     if (dec.startsWith("[")) globalSchedules = JSON.parse(dec);
-                    changed = true;
                 }
                 
-                if (changed || Object.keys(fileETags).length <= 2) renderMaketList();
-            } catch (e) { console.error("Maket Load Error", e); }
+                renderMaketList();
+            } catch (e) {}
         }
-        
+
         function renderMaketList() {
             const listEl = document.getElementById('maket-list');
+            if (!listEl) return;
             listEl.innerHTML = '';
             
             const selRoomId = document.getElementById('sel-target-room').value;
@@ -812,32 +482,29 @@
                 return;
             }
             
-            // Tìm các sự kiện trong globalSchedules mà matchedRoomId = selRoomId
             let foundAny = false;
             globalSchedules.forEach(day => {
                 if (!day.Events) return;
                 day.Events.forEach(ev => {
                     let isMatch = false;
                     if (ev.MatchedRoomId === selRoomId) isMatch = true;
-                    // Lọc những sự kiện đã có ID
                     if (isMatch && ev.Id) {
                         foundAny = true;
                         
                         const div = document.createElement('div');
                         div.style.cssText = 'background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; border-left: 3px solid #e91e63; margin-bottom: 5px;';
                         
-                        // Xem thử đã có config trong maket_details chưa?
                         let hasConfig = !!globalMaketDetails[ev.Id];
                         
-                        div.innerHTML = `
-                            <div style="font-weight:bold; font-size:0.9rem; color:#fff;">${escapeHtml(day.DateStr)} - ${escapeHtml(ev.Time || ev.Session)}</div>
-                            <div style="font-size:0.85rem; color:var(--text-muted); margin-top:3px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${escapeHtml(ev.Content)}</div>
+                        div.innerHTML = 
+                            <div style="font-weight:bold; font-size:0.9rem; color:#fff;"> + escapeHtml(day.DateStr) +  -  + escapeHtml(ev.Time || ev.Session) + </div>
+                            <div style="font-size:0.85rem; color:var(--text-muted); margin-top:3px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;"> + escapeHtml(ev.Content) + </div>
                             <div style="margin-top: 8px; text-align: right;">
-                                <button onclick="openMaketModal('${ev.Id}', this.dataset.content)" data-content="${escapeHtml(ev.Content)}" style="background: ${hasConfig ? '#1976d2' : '#424242'}; color: white; padding: 5px 10px; font-size: 12px; border-radius: 4px; width:auto; display:inline-block;">
-                                    ${hasConfig ? '✏ Đã tùy chỉnh' : '⚙ Tùy chỉnh'}
+                                <button onclick="window.openMaketModal(' + ev.Id + ', ' + escapeHtml(ev.Content) + ')" style="background:  + (hasConfig ? '#1976d2' : '#424242') + ; color: white; padding: 5px 10px; font-size: 12px; border-radius: 4px; border:none; cursor:pointer;">
+                                     + (hasConfig ? '✏ Đã tùy chỉnh' : '⚙ Tùy chỉnh') + 
                                 </button>
                             </div>
-                        `;
+                        ;
                         listEl.appendChild(div);
                     }
                 });
@@ -847,124 +514,7 @@
                 listEl.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">Không có sự kiện nào trong tuần này cho phòng đã chọn.</div>';
             }
         }
-        
-        function openMaketModal(eventId, evtContent) {
-            document.getElementById('maket-modal').style.display = 'block';
-            document.getElementById('edit-maket-id').value = eventId;
-            
-            const conf = globalMaketDetails[eventId] || {};
-            
-            document.getElementById('edit-maket-top').value = conf.topText || "UỶ BAN NHÂN DÂN ..."; // Default
-            document.getElementById('edit-maket-main').value = conf.mainText || evtContent || "";
-            document.getElementById('edit-maket-color').value = conf.mainTextColor || "#ffff00";
-            document.getElementById('edit-maket-size').value = conf.mainSize || 6.5;
-            
-            document.getElementById('edit-maket-content').value = conf.contentText || evtContent || "";
-            document.getElementById('edit-maket-content-color').value = conf.contentTextColor || "#ffff00";
-            document.getElementById('edit-maket-content-size').value = conf.contentSize || 2.4;
-            
-            document.getElementById('edit-maket-bottom').value = conf.bottomText || "";
-            document.getElementById('edit-maket-bottom-color').value = conf.bottomTextColor || "#ffff00";
-            document.getElementById('edit-maket-bottom-size').value = conf.bottomSize || 2.2;
-        }
-        
-        function closeMaketModal() {
-            document.getElementById('maket-modal').style.display = 'none';
-        }
-        
-        function saveMaketDetails() {
-            syncQueue = syncQueue.then(async () => {
-                const evId = document.getElementById('edit-maket-id').value;
-                if (!evId) return;
-                
-                const existingConf = globalMaketDetails[evId] || {};
-                
-                const conf = {
-                    ...existingConf,
-                    topText: document.getElementById('edit-maket-top').value,
-                    mainText: document.getElementById('edit-maket-main').value,
-                    mainTextColor: document.getElementById('edit-maket-color').value,
-                    mainSize: parseFloat(document.getElementById('edit-maket-size').value) || 6.5,
-                    contentText: document.getElementById('edit-maket-content').value,
-                    contentTextColor: document.getElementById('edit-maket-content-color').value,
-                    contentSize: parseFloat(document.getElementById('edit-maket-content-size').value) || 2.4,
-                    bottomText: document.getElementById('edit-maket-bottom').value,
-                    bottomTextColor: document.getElementById('edit-maket-bottom-color').value,
-                    bottomSize: parseFloat(document.getElementById('edit-maket-bottom-size').value) || 2.2,
-                };
-                
-                globalMaketDetails[evId] = conf;
-                
-                // Upload to Github
-                setStatus("Đang lưu Maket lên máy chủ...");
-                closeMaketModal();
-                renderMaketList();
-                
-                try {
-                    const plainJson = JSON.stringify(globalMaketDetails, null, 2);
-                    const encJson = await encryptAES(plainJson, PAT);
-                    const b64 = btoa(unescape(encodeURIComponent(encJson)));
-                    
-                    const payload = {
-                        message: "Update maket details via Remote",
-                        content: b64,
-                        sha: currentMaketDetailsSha || undefined
-                    };
-                    
-                    const url = `https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/devices/${currentDeviceId}/maket_details.json`;
-                    
-                    const makePutRequest = async (currentPayload) => {
-                        return fetch(url, {
-                            method: 'PUT',
-                            headers: { "Authorization": `Bearer ${PAT}`, "Content-Type": "application/json", "X-GitHub-Api-Version": "2022-11-28" },
-                            body: JSON.stringify(currentPayload)
-                        });
-                    };
-                    
-                    let res = await makePutRequest(payload);
-                    
-                    if (!res.ok && res.status === 409) {
-                        setStatus("Có xung đột cấu hình, đang tự động đồng bộ lại...");
-                        const resGet = await fetch(url, { headers: { "Authorization": `Bearer ${PAT}`, "X-GitHub-Api-Version": "2022-11-28" } });
-                        if (resGet.ok) {
-                            const dataGet = await resGet.json();
-                            currentMaketDetailsSha = dataGet.sha;
-                            
-                            // Merge server latest changes with our edits
-                            const serverContentEnc = decodeURIComponent(escape(atob(dataGet.content)));
-                            const serverContentDec = await decryptAES(serverContentEnc, PAT);
-                            let serverData = {};
-                            if (serverContentDec.startsWith("{")) {
-                                serverData = JSON.parse(serverContentDec);
-                            }
-                            serverData[evId] = conf;
-                            globalMaketDetails = serverData;
-                            
-                            const newPlainJson = JSON.stringify(serverData, null, 2);
-                            const newEncJson = await encryptAES(newPlainJson, PAT);
-                            payload.content = btoa(unescape(encodeURIComponent(newEncJson)));
-                            payload.sha = currentMaketDetailsSha;
-                            
-                            res = await makePutRequest(payload);
-                        }
-                    }
-                    
-                    if (res.ok) {
-                        const data = await res.json();
-                        currentMaketDetailsSha = data.content.sha;
-                        setStatus("Lưu Maket thành công!");
-                    } else {
-                        setStatus("Lưu Maket thất bại (Lỗi HTTP " + res.status + ")", true);
-                    }
-                } catch (e) {
-                    setStatus("Lỗi mạng khi lưu Maket: " + e.message, true);
-                }
-            });
-        }
-
-        
-        // Auto update status every 5 seconds when in control screen
-        function startStatusInterval() {
+function startStatusInterval() {
             if (window.statusInterval) clearInterval(window.statusInterval);
             window.statusInterval = setInterval(() => {
                 if (document.getElementById('device-control-screen').style.display === 'block') {
