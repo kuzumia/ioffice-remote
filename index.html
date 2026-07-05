@@ -318,16 +318,50 @@
             </div>
             <div class="form-group">
                 <label>Dòng chính (Tiêu đề)</label>
-                <textarea id="edit-maket-main" rows="3" style="width:100%; padding:8px; border-radius:4px;"></textarea>
-            </div>
-            <div class="form-group">
-                <label>Màu chữ chính</label>
-                <input type="color" id="edit-maket-color" style="width:100%; height:40px;">
+                <textarea id="edit-maket-main" rows="2" style="width:100%; padding:8px; border-radius:4px;"></textarea>
             </div>
             <div class="form-group" style="display:flex; gap:10px;">
                 <div style="flex:1;">
+                    <label>Màu chữ chính</label>
+                    <input type="color" id="edit-maket-color" style="width:100%; height:40px;">
+                </div>
+                <div style="flex:1;">
                     <label>Cỡ chữ chính</label>
-                    <input type="number" id="edit-maket-size" style="width:100%; padding:8px; border-radius:4px;">
+                    <input type="number" step="0.5" id="edit-maket-size" style="width:100%; padding:8px; border-radius:4px;">
+                </div>
+            </div>
+            
+            <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 15px 0;">
+            
+            <div class="form-group">
+                <label>Nội dung (Phần giữa)</label>
+                <textarea id="edit-maket-content" rows="3" style="width:100%; padding:8px; border-radius:4px;"></textarea>
+            </div>
+            <div class="form-group" style="display:flex; gap:10px;">
+                <div style="flex:1;">
+                    <label>Màu chữ ND</label>
+                    <input type="color" id="edit-maket-content-color" style="width:100%; height:40px;">
+                </div>
+                <div style="flex:1;">
+                    <label>Cỡ chữ ND</label>
+                    <input type="number" step="0.1" id="edit-maket-content-size" style="width:100%; padding:8px; border-radius:4px;">
+                </div>
+            </div>
+            
+            <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 15px 0;">
+            
+            <div class="form-group">
+                <label>Dòng dưới (Thời gian/Địa điểm)</label>
+                <input type="text" id="edit-maket-bottom" style="width:100%; padding:8px; border-radius:4px;">
+            </div>
+            <div class="form-group" style="display:flex; gap:10px;">
+                <div style="flex:1;">
+                    <label>Màu chữ dưới</label>
+                    <input type="color" id="edit-maket-bottom-color" style="width:100%; height:40px;">
+                </div>
+                <div style="flex:1;">
+                    <label>Cỡ chữ dưới</label>
+                    <input type="number" step="0.1" id="edit-maket-bottom-size" style="width:100%; padding:8px; border-radius:4px;">
                 </div>
             </div>
             
@@ -818,72 +852,114 @@
             document.getElementById('maket-modal').style.display = 'block';
             document.getElementById('edit-maket-id').value = eventId;
             
-            const conf = globalMaketDetails[eventId];
-            if (conf) {
-                document.getElementById('edit-maket-top').value = conf.TopText || "";
-                document.getElementById('edit-maket-main').value = conf.MainText || "";
-                document.getElementById('edit-maket-color').value = conf.MainColor || "#ffff00";
-                document.getElementById('edit-maket-size').value = conf.MainFontSize || 6.5;
-            } else {
-                document.getElementById('edit-maket-top').value = "UỶ BAN NHÂN DÂN ..."; // Default
-                document.getElementById('edit-maket-main').value = evtContent || "";
-                document.getElementById('edit-maket-color').value = "#ffff00";
-                document.getElementById('edit-maket-size').value = 6.5;
-            }
+            const conf = globalMaketDetails[eventId] || {};
+            
+            document.getElementById('edit-maket-top').value = conf.topText || "UỶ BAN NHÂN DÂN ..."; // Default
+            document.getElementById('edit-maket-main').value = conf.mainText || evtContent || "";
+            document.getElementById('edit-maket-color').value = conf.mainTextColor || "#ffff00";
+            document.getElementById('edit-maket-size').value = conf.mainSize || 6.5;
+            
+            document.getElementById('edit-maket-content').value = conf.contentText || evtContent || "";
+            document.getElementById('edit-maket-content-color').value = conf.contentTextColor || "#ffff00";
+            document.getElementById('edit-maket-content-size').value = conf.contentSize || 2.4;
+            
+            document.getElementById('edit-maket-bottom').value = conf.bottomText || "";
+            document.getElementById('edit-maket-bottom-color').value = conf.bottomTextColor || "#ffff00";
+            document.getElementById('edit-maket-bottom-size').value = conf.bottomSize || 2.2;
         }
         
         function closeMaketModal() {
             document.getElementById('maket-modal').style.display = 'none';
         }
         
-        async function saveMaketDetails() {
-            const evId = document.getElementById('edit-maket-id').value;
-            if (!evId) return;
-            
-            const conf = {
-                TopText: document.getElementById('edit-maket-top').value,
-                MainText: document.getElementById('edit-maket-main').value,
-                MainColor: document.getElementById('edit-maket-color').value,
-                MainFontSize: parseFloat(document.getElementById('edit-maket-size').value) || 6.5,
-                // Giữ nguyên các thông số khác mặc định cho đơn giản
-            };
-            
-            globalMaketDetails[evId] = conf;
-            
-            // Upload to Github
-            setStatus("Đang lưu Maket lên máy chủ...");
-            closeMaketModal();
-            renderMaketList();
-            
-            try {
-                const plainJson = JSON.stringify(globalMaketDetails, null, 2);
-                const encJson = await encryptAES(plainJson, PAT);
-                const b64 = btoa(unescape(encodeURIComponent(encJson)));
+        function saveMaketDetails() {
+            syncQueue = syncQueue.then(async () => {
+                const evId = document.getElementById('edit-maket-id').value;
+                if (!evId) return;
                 
-                const payload = {
-                    message: "Update maket details via Remote",
-                    content: b64,
-                    sha: currentMaketDetailsSha || undefined
+                const existingConf = globalMaketDetails[evId] || {};
+                
+                const conf = {
+                    ...existingConf,
+                    topText: document.getElementById('edit-maket-top').value,
+                    mainText: document.getElementById('edit-maket-main').value,
+                    mainTextColor: document.getElementById('edit-maket-color').value,
+                    mainSize: parseFloat(document.getElementById('edit-maket-size').value) || 6.5,
+                    contentText: document.getElementById('edit-maket-content').value,
+                    contentTextColor: document.getElementById('edit-maket-content-color').value,
+                    contentSize: parseFloat(document.getElementById('edit-maket-content-size').value) || 2.4,
+                    bottomText: document.getElementById('edit-maket-bottom').value,
+                    bottomTextColor: document.getElementById('edit-maket-bottom-color').value,
+                    bottomSize: parseFloat(document.getElementById('edit-maket-bottom-size').value) || 2.2,
                 };
                 
-                const url = `https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/devices/${currentDeviceId}/maket_details.json`;
+                globalMaketDetails[evId] = conf;
                 
-                const res = await fetch(url, {
-                    method: 'PUT',
-                    headers: { "Authorization": `Bearer ${PAT}`, "Content-Type": "application/json", "X-GitHub-Api-Version": "2022-11-28" },
-                    body: JSON.stringify(payload)
-                });
+                // Upload to Github
+                setStatus("Đang lưu Maket lên máy chủ...");
+                closeMaketModal();
+                renderMaketList();
                 
-                if (res.ok) {
-                    const data = await res.json();
-                    currentMaketDetailsSha = data.content.sha;
-                    setStatus("Lưu Maket thành công!");
-                } else {
-                    setStatus("Lưu Maket thất bại (Lỗi HTTP " + res.status + ")", true);
+                try {
+                    const plainJson = JSON.stringify(globalMaketDetails, null, 2);
+                    const encJson = await encryptAES(plainJson, PAT);
+                    const b64 = btoa(unescape(encodeURIComponent(encJson)));
+                    
+                    const payload = {
+                        message: "Update maket details via Remote",
+                        content: b64,
+                        sha: currentMaketDetailsSha || undefined
+                    };
+                    
+                    const url = `https://api.github.com/repos/${OWNER}/${REPO_NAME}/contents/devices/${currentDeviceId}/maket_details.json`;
+                    
+                    const makePutRequest = async (currentPayload) => {
+                        return fetch(url, {
+                            method: 'PUT',
+                            headers: { "Authorization": `Bearer ${PAT}`, "Content-Type": "application/json", "X-GitHub-Api-Version": "2022-11-28" },
+                            body: JSON.stringify(currentPayload)
+                        });
+                    };
+                    
+                    let res = await makePutRequest(payload);
+                    
+                    if (!res.ok && res.status === 409) {
+                        setStatus("Có xung đột cấu hình, đang tự động đồng bộ lại...");
+                        const resGet = await fetch(url, { headers: { "Authorization": `Bearer ${PAT}`, "X-GitHub-Api-Version": "2022-11-28" } });
+                        if (resGet.ok) {
+                            const dataGet = await resGet.json();
+                            currentMaketDetailsSha = dataGet.sha;
+                            
+                            // Merge server latest changes with our edits
+                            const serverContentEnc = decodeURIComponent(escape(atob(dataGet.content)));
+                            const serverContentDec = await decryptAES(serverContentEnc, PAT);
+                            let serverData = {};
+                            if (serverContentDec.startsWith("{")) {
+                                serverData = JSON.parse(serverContentDec);
+                            }
+                            serverData[evId] = conf;
+                            globalMaketDetails = serverData;
+                            
+                            const newPlainJson = JSON.stringify(serverData, null, 2);
+                            const newEncJson = await encryptAES(newPlainJson, PAT);
+                            payload.content = btoa(unescape(encodeURIComponent(newEncJson)));
+                            payload.sha = currentMaketDetailsSha;
+                            
+                            res = await makePutRequest(payload);
+                        }
+                    }
+                    
+                    if (res.ok) {
+                        const data = await res.json();
+                        currentMaketDetailsSha = data.content.sha;
+                        setStatus("Lưu Maket thành công!");
+                    } else {
+                        setStatus("Lưu Maket thất bại (Lỗi HTTP " + res.status + ")", true);
+                    }
+                } catch (e) {
+                    setStatus("Lỗi mạng khi lưu Maket: " + e.message, true);
                 }
-            } catch (e) {
-                setStatus("Lỗi mạng khi lưu Maket", true);
-            }
+            });
         }
 
         
